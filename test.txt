@@ -1,2 +1,0 @@
-This is a different change.
-This is a changed file.
