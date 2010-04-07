@@ -1,657 +1,321 @@
-// J. Jakes-Schauer
-//<url:vimscript::!./make.bsh>
-
-#include "IO.hpp"
-#include "GameGUI.hpp"
 #include "Game.hpp"
-#include "Wall.hpp"
-#include "ErrorWindow.hpp"
-#include "Agent.hpp"
-#include "Coordinates.hpp"
-
-#include <sstream> // wostringstream
-#include <algorithm> // find()
-#include <iterator> // distance()
-#include <cassert> // theObvious()
-
-
 
 namespace cj
 {
 
-	//*************** GAME
-	//id=game
-
-	// STATIC INIT
-	const irr::core::dimension2d<u32> Game::DEFAULT_RESOLUTION = irr::core::dimension2d<u32>(1024,768);
-	Game* Game::irrInstance = NULL;
-	bool Game::hasBeenRun = false;
-	const recti Game::HUDBB(20, 20, 200, 100);// Coordinates for the HUD, the upper-left-corner
-
-	// id=ctor
-	// Note: Parms pinched from /usr/local/include/irrlicht.h .
-	// Note: Inlined b/c will only be called once.
-	// TODO: Move default dimensions into a const.
-	//Game::Game( const irr::video::E_DRIVER_TYPE deviceType,
-		//const irr::core::dimension2d<u32>& windowSize,
-		//u32 bits,
-		//bool fullscreen,
-		//bool stencilbuffer,
-		//bool vsync
-	Game::Game()
-	: curTick(0), prevTick(0),
-	gameState( Game::STOP ),
-	viewMode( Game::BIRDS_EYE ),
-	irrDevice(NULL /*TODO: Move createirrDevice() here?*/ ),
-	videoDriver(NULL),
-	sceneManager(NULL),
-	guiEnvironment(NULL),
-	eventReceiver(NULL),
-	camera(NULL),
-	agentsList( new AgentsList ),// default ctor
-	wallsList( new WallsList ),// idem
-	//actionsList(), // TODO: Better initializers for these two?:
-	persistentActionsList(),
-	pc(NULL),
-	gameGUI(NULL),
- 	HUD(NULL)
-	{
-dpr( "* GAME CTOR" );
-
-		if( irrInstance != NULL ) throw "** Error: Attempted 2nd instantiation of cj::Game, a singleton class.";
-
-		// INSTANTIATE GAME:
-		irrInstance = this;
-		assert( irrInstance == this );
-
-		irrDevice = irr::createDevice( irr::video::EDT_OPENGL, DEFAULT_RESOLUTION);//, bits, fullscreen, stencilbuffer, vsync/*, eventReceiver*/ );// handoff
-		//irrDevice = irr::createDevice( deviceType, windowSize, bits, fullscreen, stencilbuffer, vsync[>, eventReceiver<] );// handoff
-		if( !irrDevice ) throw "*** Game initialization failure.";
-
-		videoDriver = irrDevice->getVideoDriver();
-		if( !videoDriver ) throw "*** Graphics initialization failure.";
-
-		sceneManager = irrDevice->getSceneManager();
-		if( !sceneManager ) throw "*** SceneManager initialization failure.";
-
-		guiEnvironment = irrDevice->getGUIEnvironment();
-		if( !guiEnvironment ) throw "*** GUI initialization failure.";
-
-		// CREATE CAMERA
-		setViewMode( BIRDS_EYE );
-		//camera = smgr().addCameraSceneNode(0, vector3df(0,200,0), vector3df(0,0,0));
-	//camera->setPosition(core::vector3df(50,50,-60));
-	//camera->setTarget(core::vector3df(-70,30,-60));
-
-		assert( eventReceiver == NULL );
-		// INSTANTIATE EVENT HANDLER
-		eventReceiver = new cj::event::EventReceiver<Game>( *videoDriver );
-		assert( eventReceiver != NULL );
-		irrDevice->setEventReceiver( eventReceiver );
-
-		// Create GUI window:
-		gameGUI = new GameGUI(*this);
-
-		// Little display:
-		HUD = guienv().addStaticText(L"", HUDBB );
-
-		assert( irrInstance != NULL );
-		assert( irrDevice != NULL );
-		assert( videoDriver != NULL );
-		assert( sceneManager != NULL );
-		assert( guiEnvironment != NULL );
-		assert( eventReceiver != NULL );
-		assert( gameGUI != NULL );
-
-		// TODO: Other initializations:
-		driver().setTransform(ETS_WORLD, IdentityMatrix);
-
-	}// C
-
-	// id=DTOR, id=game-dtor
-	Game::~Game()
-	{
-dpr( "* GAME DTOR " );
-		assert( hasBeenRun );  // Otherwise, not much point in the whole enterprise...
-		hasBeenRun = false; // in case we're running in the interpreted env and wish to try again
-
-		unsetPC();
-
-		// Delete members:
-		delete agentsList;
-		delete wallsList;
-		//agentsList = NULL; // const.
-		// Note: I'm not happy at not being able to use a smart pointer.
-
-//wcout << "* GAME DTOR middle: segfault coming up??" << std::endl;
-		// TODO: Wrap in auto_ptr ??
-		assert( eventReceiver != NULL );
-		delete eventReceiver;
-		eventReceiver = NULL;
-
-		// TODO: Wrap in auto_ptr ??
-		assert( gameGUI != NULL );
-		delete gameGUI;
-		gameGUI = NULL;
-
-		// End session:
-		assert( irrDevice != NULL );
-		irrDevice->drop();
-		irrDevice = NULL;
-
-		assert( irrInstance != NULL );
-		irrInstance = NULL;
-
-		HUD = NULL;
-dpr( "* GAME DTOR end" );
-	}// ~
-
-	// id=setpc
-	void Game::setPC( Agent& agent )
-	{
-		// First: if a PC is already selected, de-select her:
-		if( getIsPCSet() )
-		{
-			// But if specified Agent is already the PC, don't bother.
-			if( getPC() == agent )
-			{	return; /* Cheat a bit*/	}// if
-
-			// Else
-			getPC().ClearCircle( agents().begin(), agents().end() );
-			// TODO: Copy sensor states more elegantly:
-			agent.setRangefinder( getPC().getRangefinder() );
-			agent.setRadar( getPC().getRadar() );
-			agent.setActivation( getPC().getActivation() );
-
-			assert( gui().getRangefinder() == agent.getRangefinder() );
-			assert( gui().getRadar() == agent.getRadar() );
-			assert( gui().getActivation() == agent.getActivation() );
-
-			// Current PC shut off.  This could change in future.
-			getPC().allSensorsOff();
-		}// if
-		else// debug
-		{
-			assert( gui().getRangefinder() == false );
-			assert( gui().getRadar() == false );
-			assert( gui().getActivation() == false );
-		}// else
-
-		gui().setPC( agent );
-
-		// NB: Do this LAST:
-		pc = &agent;
-//dpr( "PC set to " << agent );
-		assert( getIsPCSet() );
-		assert( getRangefinder() == gui().getRangefinder() );
-		assert( getRadar() == gui().getRadar() );
-		assert( getActivation() == gui().getActivation() );
-	}// setPC()
-
-	// id=unset
-	void Game::unsetPC()
-	{
-		// Disable:
-		//if( getIsPCSet() ) throw "*** Error: Cannot unsetPC() called when no PC exists.";
-
-		if( getIsPCSet() )
-		{
-			// TODO: ClearCircle() really should be a Game or GameGUI method; the Agent method should be something like 'resetLighting()'.
-			getPC().ClearCircle( agents().begin(), agents().end() );
-
-			getPC().allSensorsOff();
-
-			// GUI button & readout state:
-			gui().unsetPC();
-			gui().allSensorsOff();
-		}// if
-		// Else do nothing
-
-		assert( gui().getRangefinder() == false );
-		assert( gui().getRadar() == false );
-		assert( gui().getActivation() == false );
-
-		// Show sensor window if already enabled.  TODO: Ineffective at the moment, because unsetting the PC clears the debug state, but this could change.
-
-		// NB: Do this LAST.
-		pc = NULL;
-		assert( !getIsPCSet() );
-		assert( getRangefinder() == false );
-		assert( getRadar() == false );
-		assert( getActivation() == false );
-	}// unsetPC()
-
-	inline void Game::setRangefinder( bool mode )
-	{
-		if( getIsPCSet() )
-		{
-//dpr( "Checking PC? " );
-			getPC().setRangefinder(mode);
-//dpr( "PC rangefinder " << getPC().getRangefinder() );
-			if( mode == false ) { getPC().ClearCircle( agents().begin(), agents().end() ); }
-			gui().setRangefinder(mode);
-		}// if
-		// Else no PC; moot; do nothing.
-
-//dpr( "Rangefinder " << getRangefinder() );
-//dpr( "GUI rangefinder " << gui().getRangefinder() );
-		assert( getRangefinder() == gui().getRangefinder() );
-		assert( getRadar() == gui().getRadar() );
-		assert( getActivation() == gui().getActivation() );
-	}// setRangefinder()
-	inline void Game::setRadar( bool mode )
-	{
-		if( getIsPCSet() )
-		{
-			getPC().setRadar(mode);
-			if( mode == false ) { getPC().ClearCircle( agents().begin(), agents().end() ); }
-			gui().setRadar(mode);
-		}// if
-		assert( getRangefinder() == gui().getRangefinder() );
-dpr( "Radar: " << getRadar() );
-dpr( "GUI Radar: " << gui().getRadar() );
-dpr( "PC Radar " << getPC().getRadar() );
-		assert( getRadar() == gui().getRadar() );
-		assert( getActivation() == gui().getActivation() );
-	}// setRadar()
-	inline void Game::setActivation( bool mode )
-	{
-		if( getIsPCSet() )
-		{
-			getPC().setActivation(mode);
-			if( mode == false ) { getPC().ClearCircle( agents().begin(), agents().end() ); }
-			gui().setActivation(mode);
-		}// if
-		assert( getRangefinder() == gui().getRangefinder() );
-		assert( getRadar() == gui().getRadar() );
-		assert( getActivation() == gui().getActivation() );
-	}// setActivation()
-
-	inline bool Game::getRangefinder() const
-	{	return getIsPCSet() && getPC().getRangefinder();	}// getRangefinder()
-	inline bool Game::getRadar() const
-	{	return getIsPCSet() && getPC().getRadar();	}// getRadar()
-	inline bool Game::getActivation() const
-	{	return getIsPCSet() && getPC().getActivation();	}// getActivation()
-
-	// id=addagent
-	Agent& Game::addAgent(IAnimatedMesh* const mesh,
-		ITexture* const texture,
-		//const core::vector3df& position,
-		const absVec& position,
-		const core::vector3df& rotation,
-		const core::vector3df& scale,
-		ISceneNode* const parent,
-		const s32 id,
-		bool alsoAddIfMeshPointerZero
-	) {
-dpr( "Game::addAgent" );
-		const u32 ncount = agents().size();// debug only
-
-		// TODO: Destruct these at end of program, via ~Game().
-		Agent* const pNewagent = new Agent( irrDevice, "faerie.md2", "Faerie5.BMP", "", position); // Handoff, but push ISceneManager ref onto list.
-
-		assert( pNewagent );
-		//if( pNewagent == NULL ) throw "*** Err: Heap creation of new Agent failed: possible deficiency of memory??";
-
-		// Add to list:
-		agents().push_back( pNewagent );
-		assert( agents().size() == ncount + 1 );
-
-		// Add to GUI:
-		gui().addToAgentsListBox( *pNewagent );
-
-
-		// Output gameGUI: TODO: Perh. move this to GUI?
-		std::wostringstream msg( L"Agent ");
-		msg << pNewagent->getBody().getID() << " created at " << position;
-		gui().logWindowMessage( stringw( msg.str().c_str() ) );// TODO: Ugly set of conversions.
-
-		assert( pNewagent );
-		return *pNewagent;
-	}// addAgent()
-
-
-	// TODO: removeAgent() and removeWall(), both forms, are nearly identical and could be refactored.
-	// id=remove-agent
-	// This version is called if a search has to be conducted.
-	void Game::removeAgent( Agent& agent )
-	{
-		assert( !agents().empty() );
-		// TODO: const?  Other iterator type?
-		const AgentsList::iterator it = std::find( agents().begin(), agents().end(), agent );
-		assert( *it == agent ); // This would mean trouble: if somehow she didn't get on the list.
-
-		// Delegate:
-		removeAgent(it);
-	}// removeAgent()
-	// The short version: an iterator specifies the location.
-	void Game::removeAgent( const AgentsList::iterator& it )
-	{
-		assert( !agents().empty() );
-		assert( it != agents().end() );
-
-		agents().erase( it );
-
-		gui().removeFromAgentsListBox( distance(agents().begin(), it) );
-	}// removeAgent()
-
-
-	// id=wall
-	// id=addwall
-	Wall& Game::addWall( u32 length, u32 width, const absVec& position )
-	{
-		// TODO: Don't hardcode texture name here
-		Wall* const wl = new Wall( &device(), "t351sml.jpg") ;
-		assert(wl);
-		wallsList->push_back( wl );
-		wl->makeWall(length, width, position.toIrr_vector3df());
-
-		return *wl;
-	}// addWall()
-
-	//inline Wall& Game::addWall( const absVec& position )
-	//{	return addWall(1, 1, position);	}// addWall()
-
-	void Game::removeWall( Wall& wall )
-	{
-		assert( !walls().empty() );
-		// TODO: const?  Other iterator type?
-		const WallsList::iterator it = std::find( walls().begin(), walls().end(), wall );
-		assert( *it == wall ); // This would mean trouble: if somehow she didn't get on the list.
-
-		// Delegate:
-		removeWall(it);
-	}// removeWall()
-	void Game::removeWall( const WallsList::iterator& it )
-	{
-		assert( !walls().empty() );
-		assert( it != walls().end() );
-
-		walls().erase( it );
-
-		// TODO: Do I need a list of walls?
-		//gui().removeFromAgentsListBox( distance(agents().begin(), it) );
-	}// removeWall()
-
-
-
-
-	//*** MAIN LOOP:
-	// id=run
-	void Game::run()
-	{
-//dpr( getState() );
-//dpr( device().isWindowActive() );
-dpr("* MAIN GAME LOOP...");
-		gameState = Game::RUN;
-
-		while( device().run() && !device().isWindowActive() ); // Messy; gives the game a chance to get focus.
-		while( (getState() != Game::STOP && getState() != Game::BREAK) && device().run() )
-		{
-			if( !irrDevice ) {	throw "*** Where did Irrlicht go?";	}// if
-
-			if( getState() == Game::INTERRUPT )// Focus has been lost.
-			{
-//dpr( "Yielding." );
-				device().yield();
-			}// if
-			else // do a tick.
-			{
-				assert( !device().getTimer()->isStopped() );
-
-				// Test for <C-d>, the Break interrupt.
-				if( getBreakKeypress() )
-				{	breakToShell();	}// if
-				else
-				{
-					// TODO: Verify:
-					// "debounce" safeguard:
-					static bool release;
-					// Test for <C-g>, which shows|hides GUI:
-					if( !getToggleGUIKeypress() )
-					{	release = true;	}// if
-					else
-					{
-						if( release && getToggleGUIKeypress() )
-						{
-dpr( "Setting GUI visibility to " << !getGUIVisible() );
-							setGUIVisible( !getGUIVisible() );
-							release = false;
-						}// if
-					}// if
-					//if( release && !getToggleGUIKeypress() )
-					//{	release = false;	}
-//dpr("Tick");
-					// Calculate time-slicing:
-					prevTick = curTick;
-					curTick = device().getTimer()->getTime();
-					static const SColor initColors(255,120,102,136); // TODO: Allow parameterization--if I ever know exactly what these parameters do.
-					driver().beginScene(true, true, initColors);
-
-					doTickKeyboardIO();// Schedules movement actions for the PC.
-
-					// Draw 3D stuff.
-					smgr().drawAll();
-
-					// AI routines: TODO: (wrapper method)
-					for( AgentsList::iterator it = agents().begin(); it != agents().end(); ++it )
-					{ 	it->updateSensors( agents().begin(), agents().end() ); }// for
-
-					doTickAgentsActions();
-
-					// SENSORS &c. UPDATING GUI.
-					// Draw sensor gfx: comes AFTER the 3D scenery is rendered.
-					getPersistentActionsList().runTick();
-
-					// Finally, refresh GUI:
-					guienv().drawAll();
-
-					// This comes LAST:
-					driver().endScene();
-				}// else
-			}// else
-		}// while
-dpr( "... Exiting loop." );
-	}// run()
-
-	// id=start
-	void Game::start()
-	{
-dpr( "* Initializing." );
-		assert( !hasBeenRun );
-		hasBeenRun = true;
-		//gameState = Game::RUN;
-
-		// Initialize time memo:
-		prevTick = device().getTimer()->getTime();
-
-		run();
-	}// start()
-
-
-	// TODO: If not too expensive, rewrite the controls as using Agent#turn() and Agent#move() action commands.
-	// TODO: Every so often the turning-angle goes out of [0,360) and throws; I don't know what the deal is.
-	// id=keyboard, id=key
-	void Game::doTickKeyboardIO()
-	{
-		if( getIsPCSet() )
-		{
-			//** FIXME: Rewrite into an Agent# method.  Not exactly easy.
-//wcout << "Agent moving." << std::endl;
-			//************* MOVEMENT
-			// Decouple FPS from movement:
-			const f32 frameDeltaTime = static_cast<f32>(curTick - prevTick) / 1000.f; // Time in seconds
-
-			vector3df translation;
-			f32 rotation = 0.0f;
-			//assert( translation == vector3df(0,0,0) );
-
-			//** TODO: Instead of checking keys on every loop, use keypress|release events to start|stop movement.
-
-			// "Accelerator" key pressed?a:
-			f32 move_speed = (receiver().shiftPressed() ) ? Agent::MOVEMENT_SLOW : Agent::MOVEMENT_FAST ;
-			f32 turn_speed_degrees = (receiver().shiftPressed() ? Agent::TURN_SLOW : Agent::TURN_FAST);
-
-			// ********* RELATIVE MOTION
-			if( receiver().isKeyPressed(irr::KEY_KEY_D) && !receiver().isKeyPressed(irr::KEY_KEY_A)  ) // Turn right
-			{
-				rotation += turn_speed_degrees*frameDeltaTime;
-			}// if
-			else if( receiver().isKeyPressed(irr::KEY_KEY_A) && !receiver().isKeyPressed(irr::KEY_KEY_D) ) // Turn left
-			{
-				rotation -= turn_speed_degrees*frameDeltaTime;
-			}// eif
-
-			if( receiver().isKeyPressed(irr::KEY_KEY_W) && !receiver().isKeyPressed(irr::KEY_KEY_S) ) // Forward
-			{
-				translation += move_speed * frameDeltaTime * getPC().getBody().getRotation().rotationToDirection( vector3df(1,0,0) );
-			}// if
-			else if( receiver().isKeyPressed(irr::KEY_KEY_S) && !receiver().isKeyPressed(irr::KEY_KEY_W) ) // Back
-			{
-				translation -= move_speed * frameDeltaTime * getPC().getBody().getRotation().rotationToDirection(vector3df(1,0,0) ); // Note: I know I could just use a (-1,0,0) base vector, but for consistency I'll stick to -=().
-			}// eif
-
-			// ********* ABSOLUTE
-			// Up||down, absolute:
-			if( receiver().isKeyPressed(irr::KEY_UP) && !receiver().isKeyPressed(irr::KEY_DOWN) ) // Up
-			{	translation.X += move_speed * frameDeltaTime;	}// if
-			else if( receiver().isKeyPressed(irr::KEY_DOWN) && !receiver().isKeyPressed(irr::KEY_UP) ) // Down
-			{	translation.X -= move_speed * frameDeltaTime;	}// eif
-
-			// Right||left, absolute.  NB: Z axis seems to be backwards!
-			if( receiver().isKeyPressed(irr::KEY_RIGHT) && !receiver().isKeyPressed(irr::KEY_LEFT) ) // Right
-			{	translation.Z -= move_speed * frameDeltaTime;	}// if
-			else if( receiver().isKeyPressed(irr::KEY_LEFT) && !receiver().isKeyPressed(irr::KEY_RIGHT) ) // Left
-			{	translation.Z += move_speed * frameDeltaTime;	}// eif
-
-
-
-			// Perform transformation:
-			const vector3df newpos = getPC().getBody().getPosition() + translation; // debug
-
-			// SET POSITION
-			getPC().getBody().setPosition(newpos);
-			//static const vector3df cameraOffset( 0.0, 20.0, 20.0 );
-			//cam().setPosition( getPC().getBody().getPosition() + cameraOffset );
-
-			//cam().setTarget(core::vector3df(-70,30,-60));
-			//cam().setTarget( 100.0 * getPC().getBody().getRotation().rotationToDirection( vector3df(1,0,0) ) );
-					//
-			// TODO: Absolute_position type:
-			// FIXME: Can't use this without Agent's awareness of Game type!
-			//getPC().addTickTranslation( newpos );
-			assert( getPC().getBody().getPosition() == newpos );
-
-			// Move camera, too:
-//			cam().setPosition( vector3df(newpos.X,cam().getPosition().Y, newpos.Z) );
-//			cam().setTarget( newpos );
-
-			vector3df newangle_v = getPC().getBody().getRotation() + vector3df(0,rotation,0);
-
-			newangle_v.Y = rationalizeAngle(newangle_v.Y);
-			assert( newangle_v.Y < 360.0f && newangle_v.Y >= 0.0f );
-
-			// SET ROTATION
-			getPC().getBody().setRotation( newangle_v );
-			// TODO: Absolute_rotation
-			//getPC().addTickRotation( newangle_v );
-			//getActionsList().push_back( new AgentRotation(getPC(), newangle_v) );
-			assert( getPC().getBody().getRotation() == newangle_v );
-
-			getPC().getBody().updateAbsolutePosition();
-
-			// id=camera-update
-			if( getViewMode() == Game::FIRST_PERSON )
-			{ 
-				cam().setPosition( getPC().getBody().getAbsolutePosition() + (30.0 * getPC().getBody().getAbsoluteTransformation().getRotationDegrees().rotationToDirection( vector3df(0,0,1) )) );
-				//cam().setPosition( getPC().getBody().getPosition() + (30.0 * getPC().getBody().getRotation().rotationToDirection( vector3df(1,0,0) )) );
-				cam().setRotation( getPC().getBody().getRotation() ); 
-				//cam().setRotation( getPC().getBody().getAbsoluteTransformation().getRotationDegrees() );
-			}// if
-
-
-			// FIXME: Move to GUI section:
-			// Output debug coords:
-			std::wostringstream coords;
-			coords << L"PC " <<
-			    getPC().getBody().getID() <<
-			    L" (X,Y)rel " <<
-			    getPC().getAbsolutePosition() <<
-			    //transposeVectorCoordsDammit( getPC().getBody().getAbsolutePosition() ).c_str() <<
-			    std::endl;
-			// FIXME: Re-orient the angle.
-			// TODO: getAbsoluteTransformation() instead?
-			coords << L"Θrel " << rationalizeAngle( reorientGlobalAngleDammit( getPC().getBody().getRotation().Y ) ) << L'°';
-			HUD->setText( coords.str().c_str() );
-		}// if
-	}// doTickKeyboardIO()
-
-	void Game::doTickAgentsActions()
-	{
-		for( AgentsList::iterator it = agents().begin(); it != agents().end(); ++it )
-		{	it->doTickActions(static_cast<f32>(curTick - prevTick) / 1000.f);	}// for
-	}// doTickAgentsActions()
-
-	//// Handoff to GUI.
-	//inline void Game::runAgentsOutputTick()
-	//{
-		//gui().runAgentsListBoxTick();
-	//}// runAgentsOutputTick()
-
-	//// FIXME:
-	//void Game::runSensorOutputTick()
-	//{
-		//// TODO: sensorWindow accessors
-
-		//if( getIsPCSet() )
-		//{
-			//// FIXME:
-		//}// if
-	//}// runSensorOutputTick()
-
-	//// TODO: Put on heap; pass byref w/ a smart-ptr to avoid copying?
-	//inline vector<f32> Game::drawFeelers()
-	//{
-		//assert( getIsPCSet() );
-		//// FIXME: 'debug' parm
-		//return getPC().DrawFeelers( true );
-	//}// drawFeelers()
-
-	//inline vector<pointOfInterest> Game::drawCircle()
-	//{
-		//assert( getIsPCSet() );
-		//// FIXME: 'debug' parm
-		//return getPC().DrawCircle( agents().begin(), agents().end(), true );
-	//}// drawCircle()
-
-	//inline vector<f32> Game::drawPieSlices()
-	//{
-		//assert( getIsPCSet() );
-		//// FIXME: 'debug' parm
-		//return getPC().DrawPieSlices( agents().begin(), agents().end(), true );
-	//}// drawPieSlices()
-
-
-	// Template spec for handling GUI buttons:
-	template <>
-	inline bool Game::handleIt<EGET_BUTTON_CLICKED>(IGUIElement* const button)
-	{
-		// <url:GameGUI.cpp#r=handle-gui-button>
-		return GameGUI::instance().handleButtonClicked(button);
-	}// handleIt()
-	// Template spec for disabling widget-closing signals:
-	template <>
-	inline bool Game::handleIt<EGET_ELEMENT_CLOSED>(IGUIElement* const window)
-	{
-dpr( "handleIt() close" );
-		// <url:GameGUI.cpp#r=handle-element-closed>
-		return GameGUI::instance().handleElementClosed(window);
-	}// handleIt()
-
-
-}// cj
-
-
-
-
+GameException::GameException(const char *msg)
+   : description(msg)
+{}
+
+GameException::~GameException()
+{}
+
+const char *GameException::Message(void) const
+{  return description;  }
+
+bool Game::exists = false;
+
+Game::Game()
+{
+   if(exists)
+   {  throw GameException("ERROR: Only one cj::Game can exist!");  }
+
+   srand(time(0));
+   exists = true;
+   Init();
+   Run();
+}
+
+Game::~Game()
+{
+   if(!exists)
+   {  throw GameException("ERROR: No cj::Game to destruct!");  }
+
+   for(u32 i = 0; i < agents.size(); i++)
+   {
+      if(agents[i] != NULL)
+      {
+         agents[i]->GameOver();
+         delete agents[i];
+      }
+   }
+
+   exists = false;
+}
+
+void Game::Init(void)
+{
+   device = createDevice(EDT_OPENGL, dimension2d<u32>(1280, 720), 16);
+
+   if (device == 0)
+   {  throw GameException("ERROR: Device creation failed!");  }
+
+   driver = device->getVideoDriver();
+   smgr = device->getSceneManager();
+   guienv = device->getGUIEnvironment();
+   device->setWindowCaption(L"Assignment 2 Demo");
+   smgr->addCameraSceneNode(0, vector3df(0,200,0), vector3df(0,0,0));
+   Wall wall(device, "t351sml.jpg");
+   wall.makeWall(1,20,vector3df(0,0,20));
+   wall.makeWall(1,20,vector3df(70,0,50));
+   wall.makeWall(10,1,vector3df(0,0,-20));
+   wall.makeWall(1,20,vector3df(-75,0,50));
+   population = 100;
+   gen_gap = 10;
+   generation = 1;
+   startvector = vector3df(40,0,0);
+   //mark the target with a red circle
+   IBillboardSceneNode *circle = smgr->addBillboardSceneNode(0, dimension2df(10,10), vector3df(-50,0,0));
+   circle->setMaterialType(EMT_TRANSPARENT_ALPHA_CHANNEL);
+   circle->setMaterialFlag(EMF_LIGHTING, false);
+   circle->setMaterialTexture(0, driver->getTexture("circle.png"));
+   myfile.open("runoutput.txt");
+   ifstream input;
+
+   if(true)
+   {
+      //initial population
+      for(u16 i = 0; i < population; i++)
+      {
+         agents.push_back(new cj::Agent(device, "faerie.md2", "", "", startvector));
+         agents[i]->Seek(vector3df(-50,0,0), true);
+         totscores.push_back(0);
+      }
+   }
+   else
+   {
+      input.open("input5.txt");
+      f32 value;
+      vector<f32> mymind;
+
+      for(u16 j = 0; j < population; j++)
+      {
+         for(u16 i = 0; i < 91; i++)
+         {
+            input >> value;
+            std::cout << value << " ";
+            mymind.push_back(value);
+         }
+
+         std::cout << std::endl;
+         AIBrain b(mymind);
+         agents.push_back(new cj::Agent(device, "faerie.md2", "", "", startvector,b));
+         agents[j]->Seek(vector3df(-50,0,0), true);
+         totscores.push_back(0);
+         mymind.clear();
+      }
+
+      input.close();
+   }
+
+   //start time
+   clock_gettime(CLOCK_REALTIME, &gstart);
+}
+
+void Game::Run(void)
+{
+   while(device->run() && driver)
+   {
+      driver->beginScene(true, true, SColor(255,120,102,136));
+      guienv->drawAll();
+      Tick();
+      smgr->drawAll();
+      driver->endScene();
+   }
+
+   myfile << "\n\n--------------------------------\n\n";
+
+   for(u32 i = 0; i < agents.size(); i++)
+   {
+      vector<f32> mymind = agents[i]->GetBrain().GetWeights();
+
+      for(u32 j = 0; j < mymind.size(); j++)
+      {  myfile << mymind[j] << " ";  }
+      myfile << " ";
+   }
+
+   myfile.close();
+   device->drop();
+}
+
+void Game::Tick(void)
+{
+   timespec ticktime;
+   clock_gettime(CLOCK_REALTIME, &ticktime);
+
+   if(ticktime.tv_sec - gstart.tv_sec > gen_gap)
+   {  //start a new generation after the time has passed
+      NewGeneration();
+   }
+
+   for(u32 i = 0; i < agents.size(); i++)
+   {
+      if(agents[i] != NULL)
+      {  //updat all agents
+         agents[i]->Update();
+      }
+   }
+}
+
+void Game::NewGeneration(void)
+{
+   vector<AIBrain*> minds(population,NULL);
+   vector<u32> scores(population, 0);
+
+   // 5 starting positions, one center, one left and one right of wall
+   if(generation % 5 == 0)
+   {  startvector = vector3df(40,0,0);  }
+   else if(generation % 5 == 1)
+   {  startvector = vector3df(-60,0,40);  }
+   else if(generation % 5 == 2)
+   {  startvector = vector3df(20,0,20);  }
+   else if(generation % 5 == 3)
+   {  startvector = vector3df(20,0,-20);  }
+   else if(generation % 5 == 4)
+   {  startvector = vector3df(-60,0,-40);  }
+
+   for(u32 j = 0; j < agents.size(); j++)
+   {
+      scores[j] = agents.at(j)->GetFitness(vector3df(-50,0,0));
+      totscores[j] += scores[j];
+   }
+
+   if(generation % 5 == 0)
+   {  //regeneration
+      //keep the best one
+      u32 besti = 0;
+      u32 besti2 = 1;
+      u32 bestscore = totscores[0];
+      u32 bestscore2 = totscores[1];
+
+      std::cout << "Generation: " << generation/5 << std::endl;
+      myfile << "Generation: " << generation/5 << std::endl;
+      for(u32 j = 1; j < population; j++)
+      {
+         if(bestscore < totscores[j])
+         {
+            besti2 = besti;
+            bestscore2 = bestscore;
+            besti = j;
+            bestscore = totscores[j];
+         }
+         else if(bestscore2 < totscores[j])
+         {
+            besti2 = j;
+            bestscore2 = totscores[j];
+         }
+
+         std::cout << totscores[j] << " ";
+         myfile << totscores[j] << " ";
+      }
+
+      std::cout << "\nBest score: " << bestscore << "\n\n";
+      myfile << "\nBest score: " << bestscore << std::endl;
+      std::cout << "\nBest score 2: " << bestscore2 << "\n\n";
+      myfile << "\nBest score: " << bestscore2 << "\n" << std::endl;
+      myfile << "--------------------------------\n\n";
+      vector<f32> mymind = agents[besti]->GetBrain().GetWeights();
+      for(u32 j = 0; j < mymind.size(); j++)
+      {  myfile << mymind[j] << " ";  }
+      myfile << "\n\n--------------------------------" << std::endl;
+      u32 p = 10;
+
+      for(u32 i = 0; i <= p; i++)
+      {  minds[i] = new AIBrain(agents[besti]->GetBrain().GetWeights());  }
+      minds[11] = new AIBrain(agents[besti2]->GetBrain().GetWeights());
+      minds[12] = new AIBrain(agents[besti2]->GetBrain().GetWeights());
+
+      for(u32 i = p+2; i < population-1; i+=2)
+      {  //generate parents and babies
+         minds[i] = new AIBrain(GetParent(totscores, bestscore));
+         minds[i+1] = new AIBrain(GetParent(totscores, bestscore));
+         CrossOver(minds[i], minds[i+1]);
+      }
+
+      //scores to 0
+      totscores.clear();
+      for(u32 i = 0; i < population; i++)
+      {  totscores.push_back(0);  }
+
+   }
+   else
+   {
+      for(u32 i = 0; i < population; i++)
+      {
+         minds[i] = new AIBrain(agents[i]->GetBrain().GetWeights());
+      }
+   }
+
+   //make new population
+   for(u16 i = 0; i < population; i++)
+   {
+      agents.at(i)->Reset(startvector, *(minds.at(i)));
+      agents.at(i)->Seek(vector3df(-50,0,0), true);
+   }
+
+   generation++;
+
+   for(u16 i = 0; i < minds.size(); i++)
+   {
+      delete minds[i];
+   }
+
+   clock_gettime(CLOCK_REALTIME, &gstart);
+}
+
+AIBrain Game::GetParent(vector<u32> scores, u32 bestscore)
+{
+   u32 index = rand() % scores.size();  // starting index
+   bestscore = rand() % bestscore;  // look for a score at least this much (random number from 0 to bestscore)
+
+   // every individual has a chance to be a parent, but higher scores
+   // have higher chances
+   while(scores.at(index) < bestscore)
+   {
+      index++;
+      if(index >= scores.size())
+      {  index = 0;  }  // wrap around to front
+   }
+
+   return agents.at(index)->GetBrain();  // this is the parent
+}
+
+void Game::CrossOver(AIBrain *mom, AIBrain *dad)
+{
+   u16 xrate = 69;  // this is 70% crossover weight
+   u16 mutrate = 1;  // mutation rate is 1% if crossover happens
+   vector<f32> mom_weights = mom->GetWeights();
+   vector<f32> dad_weights = dad->GetWeights();
+
+   if(rand() % 100 > xrate)
+   {
+      for(u16 i = 0; i < mom_weights.size(); i++)
+      {
+         if(rand() % 100 > xrate)
+         {
+            if(rand() % 100 > mutrate)
+            {  // mutation is a completely new random weight
+               f32 w = rand() % AIBrain::MAX_WEIGHT;
+               w /= AIBrain::MAX_WEIGHT;
+               if(rand() % 2)
+               {  w *= -1;  }
+               dad->SetWeight(i, w);  // only 1 baby is mutated out of 2
+            }
+            else
+            {  dad->SetWeight(i, mom_weights[i]);  }
+
+            mom->SetWeight(i, dad_weights[i]);
+         }
+      }
+   }
+   else
+   {
+      for(u16 i = 0; i < mom_weights.size(); i++)
+      {
+         dad->SetWeight(i, dad_weights[i]);
+         mom->SetWeight(i, mom_weights[i]);
+      }
+   }
+}
+
+};
