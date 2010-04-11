@@ -31,7 +31,7 @@ int main()
 	Agent& faerie = game.addAgent();// default version
 	game.setPC( faerie );
 
-	game.setViewMode( Game::FIRST_PERSON );
+	//game.setViewMode( Game::FIRST_PERSON );
 
 	//Agent& faerie = game.addAgent( game.smgr().getMesh(DEFAULT_MESH.c_str()), game.driver().getTexture(DEFAULT_TEXTURE.c_str()), vector3df(), vector3df(0.0f,0.0f,0.0f), vector3df(1.0f, 1.0f, 1.0f) );
 	//// Make controllable:

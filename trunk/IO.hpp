@@ -80,5 +80,11 @@ inline irr::f32 reorientGlobalAngleDammit( const irr::f32 theta )
 }// reorientGlobalAngleDammit()
 
 
+inline void print_vector2df( const irr::core::vector2df& v )
+{	std::wcout << v << std::endl;	}// print_vector2df()
+
+inline void print_vector3df( const irr::core::vector3df& v )
+{	std::wcout << v << std::endl;	}// print_vector3df()
+
 #endif
 

@@ -54,7 +54,8 @@ namespace cj
 	persistentActionsList(),
 	pc(NULL),
 	gameGUI(NULL),
- 	HUD(NULL)
+ 	HUD(NULL),
+	navgraph(NULL)
 	{
 dpr( "* GAME CTOR" );
 
@@ -95,6 +96,8 @@ dpr( "* GAME CTOR" );
 		// Little display:
 		HUD = guienv().addStaticText(L"", HUDBB );
 
+		navgraph = new NavGraph(smgr(), driver());
+
 		assert( irrInstance != NULL );
 		assert( irrDevice != NULL );
 		assert( videoDriver != NULL );
@@ -102,6 +105,8 @@ dpr( "* GAME CTOR" );
 		assert( guiEnvironment != NULL );
 		assert( eventReceiver != NULL );
 		assert( gameGUI != NULL );
+		assert( navgraph != NULL );
+
 
 		// TODO: Other initializations:
 		driver().setTransform(ETS_WORLD, IdentityMatrix);
@@ -133,6 +138,10 @@ dpr( "* GAME DTOR " );
 		assert( gameGUI != NULL );
 		delete gameGUI;
 		gameGUI = NULL;
+
+		assert( navgraph != NULL );
+		delete navgraph;
+		navgraph = NULL;
 
 		// End session:
 		assert( irrDevice != NULL );
@@ -337,15 +346,37 @@ dpr( "Game::addAgent" );
 	}// removeAgent()
 
 
-	// id=wall
-	// id=addwall
+	// id=wall, id=add-wall, // id=addwall
 	Wall& Game::addWall( u32 length, u32 width, const absVec& position )
 	{
 		// TODO: Don't hardcode texture name here
-		Wall* const wl = new Wall( &device(), "t351sml.jpg") ;
+		Wall* const wl = new Wall( &device(), "t351sml.jpg", position.toIrr_vector3df()) ;
 		assert(wl);
 		wallsList->push_back( wl );
-		wl->makeWall(length, width, position.toIrr_vector3df());
+		wl->makeWall(length, width); 
+		//wl->makeWall(length, width, position.toIrr_vector3df());
+
+		VectorList expandedGeometryPoints = wl->expandGeometry( Agent::DEFAULT_GIRTH / 2.0 );
+
+		//VectorList::iterator prevIt = expandedGeometryPoints.end(); 
+		//PathNode* prevnode = NULL;
+		for( VectorList::iterator it = expandedGeometryPoints.begin(); it != expandedGeometryPoints.end(); ++it )
+		{
+			PathNode& newnode = navgraph->addNode( *it );
+			// FIXME: parameterize:
+			newnode.setVisible(true);
+
+			// FIXME: Adding edges; keep first node, bind each node to the previous, &c.  Bind last to first.
+			//if( prevnode )// skip first iteration
+			//{	navgraph->addEdge( *prevnode, newnode );	}// if
+			//prevnode = &newnode;
+			//if( prevIt == expandedGeometryPoints.end())
+			//{	prevIt = expandedGeometryPoints.begin(); }// if
+			//else	
+			//{	navgraph->addEdge( *prevIt, *it );	}// else
+		}// for
+		//navgraph->addEdge( *prevnode, *expandedGeometryPoints.begin() );
+		//navgraph->addEdge( *prevIt, *expandedGeometryPoints.begin() );
 
 		return *wl;
 	}// addWall()
@@ -477,113 +508,114 @@ dpr( "* Initializing." );
 	{
 		if( getIsPCSet() )
 		{
-			//** FIXME: Rewrite into an Agent# method.  Not exactly easy.
-//wcout << "Agent moving." << std::endl;
-			//************* MOVEMENT
-			// Decouple FPS from movement:
-			const f32 frameDeltaTime = static_cast<f32>(curTick - prevTick) / 1000.f; // Time in seconds
-
-			vector3df translation;
-			f32 rotation = 0.0f;
-			//assert( translation == vector3df(0,0,0) );
-
-			//** TODO: Instead of checking keys on every loop, use keypress|release events to start|stop movement.
-
-			// "Accelerator" key pressed?a:
-			f32 move_speed = (receiver().shiftPressed() ) ? Agent::MOVEMENT_SLOW : Agent::MOVEMENT_FAST ;
-			f32 turn_speed_degrees = (receiver().shiftPressed() ? Agent::TURN_SLOW : Agent::TURN_FAST);
-
-			// ********* RELATIVE MOTION
-			if( receiver().isKeyPressed(irr::KEY_KEY_D) && !receiver().isKeyPressed(irr::KEY_KEY_A)  ) // Turn right
+			//if( receiver().isKeyPressed(irr::KEY_KEY_D) || receiver().isKeyPressed(irr::KEY_KEY_A) || receiver().isKeyPressed(irr::KEY_KEY_W) || receiver().isKeyPressed(irr::KEY_KEY_S) || receiver().isKeyPressed(irr::KEY_UP) || receiver().isKeyPressed(irr::KEY_DOWN) || receiver().isKeyPressed(irr::KEY_RIGHT) || receiver().isKeyPressed(irr::KEY_LEFT))
 			{
-				rotation += turn_speed_degrees*frameDeltaTime;
+				//** FIXME: Rewrite into an Agent# method.  Not exactly easy.
+	//wcout << "Agent moving." << std::endl;
+				//************* MOVEMENT
+				// Decouple FPS from movement:
+				const f32 frameDeltaTime = static_cast<f32>(curTick - prevTick) / 1000.f; // Time in seconds
+
+				vector3df translation;
+				f32 rotation = 0.0f;
+				//assert( translation == vector3df(0,0,0) );
+
+				//** TODO: Instead of checking keys on every loop, use keypress|release events to start|stop movement.
+
+				// "Accelerator" key pressed?a:
+				f32 move_speed = (receiver().shiftPressed() ) ? Agent::MOVEMENT_SLOW : Agent::MOVEMENT_FAST ;
+				f32 turn_speed_degrees = (receiver().shiftPressed() ? Agent::TURN_SLOW : Agent::TURN_FAST);
+
+
+				// ********* RELATIVE MOTION
+				if( receiver().isKeyPressed(irr::KEY_KEY_D) && !receiver().isKeyPressed(irr::KEY_KEY_A)  ) // Turn right
+				{
+					rotation += turn_speed_degrees*frameDeltaTime;
+				}// if
+				else if( receiver().isKeyPressed(irr::KEY_KEY_A) && !receiver().isKeyPressed(irr::KEY_KEY_D) ) // Turn left
+				{
+					rotation -= turn_speed_degrees*frameDeltaTime;
+				}// eif
+
+				if( receiver().isKeyPressed(irr::KEY_KEY_W) && !receiver().isKeyPressed(irr::KEY_KEY_S) ) // Forward
+				{
+					translation += move_speed * frameDeltaTime * getPC().getBody().getRotation().rotationToDirection( vector3df(1,0,0) );
+				}// if
+				else if( receiver().isKeyPressed(irr::KEY_KEY_S) && !receiver().isKeyPressed(irr::KEY_KEY_W) ) // Back
+				{
+					translation -= move_speed * frameDeltaTime * getPC().getBody().getRotation().rotationToDirection(vector3df(1,0,0) ); // Note: I know I could just use a (-1,0,0) base vector, but for consistency I'll stick to -=().
+				}// eif
+
+				// ********* ABSOLUTE
+				// Up||down, absolute:
+				if( receiver().isKeyPressed(irr::KEY_UP) && !receiver().isKeyPressed(irr::KEY_DOWN) ) // Up
+				{	translation.X += move_speed * frameDeltaTime;	}// if
+				else if( receiver().isKeyPressed(irr::KEY_DOWN) && !receiver().isKeyPressed(irr::KEY_UP) ) // Down
+				{	translation.X -= move_speed * frameDeltaTime;	}// eif
+
+				// Right||left, absolute.  NB: Z axis seems to be backwards!
+				if( receiver().isKeyPressed(irr::KEY_RIGHT) && !receiver().isKeyPressed(irr::KEY_LEFT) ) // Right
+				{	translation.Z -= move_speed * frameDeltaTime;	}// if
+				else if( receiver().isKeyPressed(irr::KEY_LEFT) && !receiver().isKeyPressed(irr::KEY_RIGHT) ) // Left
+				{	translation.Z += move_speed * frameDeltaTime;	}// eif
+
+
+
+				// SET POSITION
+				const vector3df newpos = getPC().getBody().getPosition() + translation; // debug
+				getPC().getBody().setPosition(newpos);
+				assert( getPC().getBody().getPosition() == newpos );
+
+				//static const vector3df cameraOffset( 0.0, 20.0, 20.0 );
+				//cam().setPosition( getPC().getBody().getPosition() + cameraOffset );
+
+				//cam().setTarget(core::vector3df(-70,30,-60));
+				//cam().setTarget( 100.0 * getPC().getBody().getRotation().rotationToDirection( vector3df(1,0,0) ) );
+						//
+				//getPC().addTickTranslation( newpos );
+
+				// Move camera, too:
+	//			cam().setPosition( vector3df(newpos.X,cam().getPosition().Y, newpos.Z) );
+	//			cam().setTarget( newpos );
+
+				vector3df newangle_v = getPC().getBody().getRotation() + vector3df(0,rotation,0);
+
+				newangle_v.Y = rationalizeAngle(newangle_v.Y);
+				assert( newangle_v.Y < 360.0f && newangle_v.Y >= 0.0f );
+
+				// SET ROTATION
+				getPC().getBody().setRotation( newangle_v );
+				// TODO: Absolute_rotation
+				//getPC().addTickRotation( newangle_v );
+				//getActionsList().push_back( new AgentRotation(getPC(), newangle_v) );
+				assert( getPC().getBody().getRotation() == newangle_v );
+
+				getPC().getBody().updateAbsolutePosition();
+
+				// id=camera-update
+				if( getViewMode() == Game::FIRST_PERSON )
+				{
+					cam().setPosition( getPC().getBody().getAbsolutePosition() + (30.0 * getPC().getBody().getAbsoluteTransformation().getRotationDegrees().rotationToDirection( vector3df(1,0,0) )) );
+					//cam().setPosition( getPC().getBody().getPosition() + (30.0 * getPC().getBody().getRotation().rotationToDirection( vector3df(1,0,0) )) );
+					cam().setRotation( getPC().getBody().getRotation() );
+					//cam().setRotation( getPC().getBody().getAbsoluteTransformation().getRotationDegrees() );
+				}// if
+
+
+				// FIXME: Move to GUI section:
+				// Output debug coords:
+				std::wostringstream coords;
+				coords << L"PC " <<
+				    getPC().getBody().getID() <<
+				    L" (X,Y)rel " <<
+				    getPC().getAbsolutePosition() <<
+				    //transposeVectorCoordsDammit( getPC().getBody().getAbsolutePosition() ).c_str() <<
+				    std::endl;
+				// FIXME: Re-orient the angle.
+				// TODO: getAbsoluteTransformation() instead?
+				coords << L"Θrel " << rationalizeAngle( reorientGlobalAngleDammit( getPC().getBody().getRotation().Y ) ) << L'°';
+				HUD->setText( coords.str().c_str() );
 			}// if
-			else if( receiver().isKeyPressed(irr::KEY_KEY_A) && !receiver().isKeyPressed(irr::KEY_KEY_D) ) // Turn left
-			{
-				rotation -= turn_speed_degrees*frameDeltaTime;
-			}// eif
-
-			if( receiver().isKeyPressed(irr::KEY_KEY_W) && !receiver().isKeyPressed(irr::KEY_KEY_S) ) // Forward
-			{
-				translation += move_speed * frameDeltaTime * getPC().getBody().getRotation().rotationToDirection( vector3df(1,0,0) );
-			}// if
-			else if( receiver().isKeyPressed(irr::KEY_KEY_S) && !receiver().isKeyPressed(irr::KEY_KEY_W) ) // Back
-			{
-				translation -= move_speed * frameDeltaTime * getPC().getBody().getRotation().rotationToDirection(vector3df(1,0,0) ); // Note: I know I could just use a (-1,0,0) base vector, but for consistency I'll stick to -=().
-			}// eif
-
-			// ********* ABSOLUTE
-			// Up||down, absolute:
-			if( receiver().isKeyPressed(irr::KEY_UP) && !receiver().isKeyPressed(irr::KEY_DOWN) ) // Up
-			{	translation.X += move_speed * frameDeltaTime;	}// if
-			else if( receiver().isKeyPressed(irr::KEY_DOWN) && !receiver().isKeyPressed(irr::KEY_UP) ) // Down
-			{	translation.X -= move_speed * frameDeltaTime;	}// eif
-
-			// Right||left, absolute.  NB: Z axis seems to be backwards!
-			if( receiver().isKeyPressed(irr::KEY_RIGHT) && !receiver().isKeyPressed(irr::KEY_LEFT) ) // Right
-			{	translation.Z -= move_speed * frameDeltaTime;	}// if
-			else if( receiver().isKeyPressed(irr::KEY_LEFT) && !receiver().isKeyPressed(irr::KEY_RIGHT) ) // Left
-			{	translation.Z += move_speed * frameDeltaTime;	}// eif
-
-
-
-			// Perform transformation:
-			const vector3df newpos = getPC().getBody().getPosition() + translation; // debug
-
-			// SET POSITION
-			getPC().getBody().setPosition(newpos);
-			//static const vector3df cameraOffset( 0.0, 20.0, 20.0 );
-			//cam().setPosition( getPC().getBody().getPosition() + cameraOffset );
-
-			//cam().setTarget(core::vector3df(-70,30,-60));
-			//cam().setTarget( 100.0 * getPC().getBody().getRotation().rotationToDirection( vector3df(1,0,0) ) );
-					//
-			// TODO: Absolute_position type:
-			// FIXME: Can't use this without Agent's awareness of Game type!
-			//getPC().addTickTranslation( newpos );
-			assert( getPC().getBody().getPosition() == newpos );
-
-			// Move camera, too:
-//			cam().setPosition( vector3df(newpos.X,cam().getPosition().Y, newpos.Z) );
-//			cam().setTarget( newpos );
-
-			vector3df newangle_v = getPC().getBody().getRotation() + vector3df(0,rotation,0);
-
-			newangle_v.Y = rationalizeAngle(newangle_v.Y);
-			assert( newangle_v.Y < 360.0f && newangle_v.Y >= 0.0f );
-
-			// SET ROTATION
-			getPC().getBody().setRotation( newangle_v );
-			// TODO: Absolute_rotation
-			//getPC().addTickRotation( newangle_v );
-			//getActionsList().push_back( new AgentRotation(getPC(), newangle_v) );
-			assert( getPC().getBody().getRotation() == newangle_v );
-
-			getPC().getBody().updateAbsolutePosition();
-
-			// id=camera-update
-			if( getViewMode() == Game::FIRST_PERSON )
-			{ 
-				cam().setPosition( getPC().getBody().getAbsolutePosition() + (30.0 * getPC().getBody().getAbsoluteTransformation().getRotationDegrees().rotationToDirection( vector3df(0,0,1) )) );
-				//cam().setPosition( getPC().getBody().getPosition() + (30.0 * getPC().getBody().getRotation().rotationToDirection( vector3df(1,0,0) )) );
-				cam().setRotation( getPC().getBody().getRotation() ); 
-				//cam().setRotation( getPC().getBody().getAbsoluteTransformation().getRotationDegrees() );
-			}// if
-
-
-			// FIXME: Move to GUI section:
-			// Output debug coords:
-			std::wostringstream coords;
-			coords << L"PC " <<
-			    getPC().getBody().getID() <<
-			    L" (X,Y)rel " <<
-			    getPC().getAbsolutePosition() <<
-			    //transposeVectorCoordsDammit( getPC().getBody().getAbsolutePosition() ).c_str() <<
-			    std::endl;
-			// FIXME: Re-orient the angle.
-			// TODO: getAbsoluteTransformation() instead?
-			coords << L"Θrel " << rationalizeAngle( reorientGlobalAngleDammit( getPC().getBody().getRotation().Y ) ) << L'°';
-			HUD->setText( coords.str().c_str() );
 		}// if
 	}// doTickKeyboardIO()
 

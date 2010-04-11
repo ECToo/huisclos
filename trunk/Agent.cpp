@@ -8,6 +8,8 @@ const f32 Agent::MOVEMENT_FAST = 60.0f;
 const f32 Agent::TURN_SLOW = 70.0f;
 const f32 Agent::TURN_FAST = 180.0f;
 
+const f32 Agent::DEFAULT_GIRTH = 15.0; // FIXME: This was arbitrarily chosen.
+
 // Counter for generating the next free ID#:
 s32 Agent::nextAvailableID = 0;
 

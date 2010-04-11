@@ -19,6 +19,7 @@
 #include "SensorWin.hpp"
 #include "Action.hpp"
 #include "Coordinates.hpp"
+#include "Navigation.hpp"
 
 // <url:vimscript::%s/\\v(\\s)(core::)/\\1irr::\\2/g>
 // <url:vimscript::%s/\\v(\\s)(video::)/\\1irr::\\2/g>
@@ -31,7 +32,8 @@
 // TODO: Check invariants more often.
 namespace cj
 {
-	using namespace actions;
+	using namespace cj::actions;
+	using namespace cj::nav;
 
 	//class Game;// fwd dec for GameGUI
 	//typedef boost::ptr_vector<Agent> AgentsList; // migrated to GameGUI.hpp
@@ -430,6 +432,7 @@ dpr( "Resuming (un-breaking?)..." );
 		// (This is the little readout in the upper-left corner:)
 		// TODO: Wrap this in a RAII class, store as pointer, &c., &c:
 		IGUIStaticText* HUD;
+		NavGraph* navgraph;
 
 		// Used by run() & resume().
 		void run();
