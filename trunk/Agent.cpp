@@ -22,7 +22,7 @@ s32 Agent::nextAvailableID = 0;
 //}
 
 Agent::Agent(IrrlichtDevice* d, /*PersistentActionsList& pal,*/ stringw mesh, stringw t, stringw h, const absVec& p)
- : /*persistentActionsList(pal),*/ device(d), path(h), texture(t), 
+ : /*persistentActionsList(pal),*/ device(d), path(h), texture(t),
 	rangefinderVisible(false), radarVisible(false), activationLevelsVisible(false),
 	feelersOutput(), nearbyAgents(), activationLevels()/*, sensorsAction(*this)*/
 {
@@ -74,9 +74,9 @@ void Agent::turn( const relAngle& ang, f32 speed )
 // TODO: inline
 // id=move
 actions::ActAgentMove* const Agent::move( const relVec& dest, f32 speed )
-{ 	
+{
 	actions::ActAgentMove* const newact = new actions::ActAgentMove(*this, dest, speed);
-	actionsList.queueAction( newact ); 
+	actionsList.queueAction( newact );
 	return newact;
 }// move()
 
@@ -230,6 +230,57 @@ bool Agent::moveAtomic( const relVec& dest )
 //inline void Agent::turnAtomic( const relAngle& theta )
 //{	setRotation( getRotation() + theta );	}// turnAtomic()
 
+// <TAG> CA - NOTE: Do not add functions to Agent beyond this line.
+// This will be my section.
+
+bool Agent::MoveVector(vector3df distance)
+{
+    // remember old values
+    u32 old_awareness = awareness;
+    u32 old_range = range;
+    u32 old_resolution = resolution;
+    // to speed up collision detection and make sure we detect from all angles
+    awareness = 360;
+    range = 7;
+    resolution = 7;
+    // record success or failure of movement
+    bool moved = false;
+    vector3df old_position = body->getPosition();
+    vector<f32> cpoints = DrawFeelers(false);
+    f32 oldc = 0;
+    f32 newc = 0;
+
+    // find collision amounts for current position
+    for(u32 i = 0; i < cpoints.size(); i++)
+    {  oldc += cpoints.at(i);  }
+
+    // find collision amounts for new position
+    body->setPosition(old_position + distance);
+    // NOTE: MUST call this anytime you use setPosition and want to use the new
+    // position of the IAnimatedSceneNode in the same tick
+    body->updateAbsolutePosition();
+    cpoints = DrawFeelers(false);
+    for(u32 i = 0; i < cpoints.size(); i++)
+    {  newc += cpoints.at(i);  }
+
+    // the 0.0001 is for rounding errors and to slightly favor movement
+    if(oldc - 0.0001 > newc)
+    {
+        moved = false;
+        body->setPosition(old_position);
+    }
+    else
+    {
+        moved = true;
+    }
+
+    // reset to orignal values
+    awareness = old_awareness;
+    range = old_range;
+    resolution = old_resolution;
+
+    return moved;
+}
 
 }// cj
 

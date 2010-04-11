@@ -28,7 +28,7 @@ struct pointOfInterest
 };
 
 	// fwd dec
-	namespace actions { class ActAgentTurn; class ActAgentMove; }// 
+	namespace actions { class ActAgentTurn; class ActAgentMove; }//
 
 	// TODO: Change private to protected once subclass interface has been considered properly.
 	class Agent : public boost::noncopyable, public sensor::SSensors
@@ -229,6 +229,11 @@ struct pointOfInterest
 
 		// (used by ActAgentMove::runTick() for debug-line drawing.  TODO: Perh. make this a property of the Action itself?)
 		IVideoDriver& getDriver() {	return *driver;	}// getDriver()
+
+		// <TAG> CA - NOTE: Do not add public functions to Agent beyond this line.
+		// This will be my section.
+		bool MoveVector(vector3df distance);  //COLLISON MOVEMENT
+
 	// id=private
 	private:
 		IrrlichtDevice *device; //get driver and smgr from this
