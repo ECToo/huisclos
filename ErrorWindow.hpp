@@ -16,7 +16,7 @@ namespace cj
 		using namespace irr::core;
 		using namespace irr::gui;
 
-		class ErrorWindow : boost::noncopyable
+		class ErrorWindow : public boost::noncopyable
 		{
 		public:
 			// The window should close if and only if its button is clicked.  Therefore the dtor here must be controlled; therefore the ctor must be controlled.

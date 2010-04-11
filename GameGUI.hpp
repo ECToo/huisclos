@@ -70,7 +70,7 @@ namespace cj
 		//************** GAMEGUI
 		// id=gui, id=gamegui
 		//template <typename TGame>
-		class GameGUI : boost::noncopyable, public sensor::ISensors
+		class GameGUI : public boost::noncopyable, public sensor::ISensors
 		{
 		public:
 			static const u32 WIDTH = 550;

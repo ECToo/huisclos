@@ -28,13 +28,14 @@ struct pointOfInterest
 };
 
 	// fwd dec
-	namespace actions { class ActAgentTurn; }
-	namespace actions { class ActAgentMove; }
+	namespace actions { class ActAgentTurn; class ActAgentMove; }// 
 
 	// TODO: Change private to protected once subclass interface has been considered properly.
-	class Agent : boost::noncopyable, public sensor::SSensors
+	class Agent : public boost::noncopyable, public sensor::SSensors
 	{
 	public:
+		static const f32 DEFAULT_GIRTH;
+
 		static const f32 MOVEMENT_SLOW;
 		static const f32 MOVEMENT_FAST;
 		static const f32 TURN_SLOW;
