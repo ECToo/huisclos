@@ -353,12 +353,12 @@ dpr( "Game::addAgent" );
 		Wall* const wl = new Wall( &device(), "t351sml.jpg", position.toIrr_vector3df()) ;
 		assert(wl);
 		wallsList->push_back( wl );
-		wl->makeWall(length, width); 
+		wl->makeWall(length, width);
 		//wl->makeWall(length, width, position.toIrr_vector3df());
 
 		VectorList expandedGeometryPoints = wl->expandGeometry( Agent::DEFAULT_GIRTH / 2.0 );
 
-		//VectorList::iterator prevIt = expandedGeometryPoints.end(); 
+		//VectorList::iterator prevIt = expandedGeometryPoints.end();
 		//PathNode* prevnode = NULL;
 		for( VectorList::iterator it = expandedGeometryPoints.begin(); it != expandedGeometryPoints.end(); ++it )
 		{
@@ -372,7 +372,7 @@ dpr( "Game::addAgent" );
 			//prevnode = &newnode;
 			//if( prevIt == expandedGeometryPoints.end())
 			//{	prevIt = expandedGeometryPoints.begin(); }// if
-			//else	
+			//else
 			//{	navgraph->addEdge( *prevIt, *it );	}// else
 		}// for
 		//navgraph->addEdge( *prevnode, *expandedGeometryPoints.begin() );
@@ -563,8 +563,14 @@ dpr( "* Initializing." );
 
 				// SET POSITION
 				const vector3df newpos = getPC().getBody().getPosition() + translation; // debug
-				getPC().getBody().setPosition(newpos);
-				assert( getPC().getBody().getPosition() == newpos );
+
+				// <TAG> JS (2)
+				// getPC().getBody().setPosition(newpos);
+            // assert( getPC().getBody().getPosition() == newpos );
+
+            // <TAG> CA (2)
+            bool success = getPC().MoveVector(translation);
+            if(success) {} // Get rid of warning. Eventually, success needs to be used for something.
 
 				//static const vector3df cameraOffset( 0.0, 20.0, 20.0 );
 				//cam().setPosition( getPC().getBody().getPosition() + cameraOffset );
