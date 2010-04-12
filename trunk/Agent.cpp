@@ -269,10 +269,29 @@ bool Agent::MoveVector(vector3df distance)
         moved = false;
         body->setPosition(old_position);
     }
-    else
-    {
-        moved = true;
-    }
+   else
+   {
+      line3d<f32> line;
+      //start at old position
+      line.start = old_position;
+      //end at the new position
+      line.end = old_position + distance;
+      vector3df point;
+      triangle3df outtri;
+      //draw relative to absolute coordinates
+      driver->setTransform(video::ETS_WORLD, matrix4());
+
+      if(cmgr->getSceneNodeAndCollisionPointFromRay(line, point, outtri))
+		{  //new position is not in line of sight of old position, so we
+         //move only to the collision point - range
+         vector3df d = distance;
+         d.normalize();
+         d *= range;
+         body->setPosition(point - d);
+      }
+
+      moved = true;
+   }
 
     // reset to orignal values
     awareness = old_awareness;
