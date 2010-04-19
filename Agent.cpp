@@ -10,7 +10,7 @@ s32 Agent::genID()
 {  return ++nextAvailableID;  }
 
 Agent::Agent(IrrlichtDevice* d, stringw mesh, stringw t, stringw h, vector3df p)
- : device(d), path(h), texture(t), wheel(120,40,10)
+ : device(d), path(h), texture(t), wheel(180,40,40)
 {
     //initialize naming short cuts
     driver = device->getVideoDriver();
@@ -23,13 +23,13 @@ Agent::Agent(IrrlichtDevice* d, stringw mesh, stringw t, stringw h, vector3df p)
     //default stand animation
     body->setMD2Animation(scene::EMAT_STAND);
     //texture for the agent
-    //body->setMaterialTexture(0, driver->getTexture(texture));
+    body->setMaterialTexture(0, driver->getTexture(texture));
     //place the agent in the world
     body->setPosition(p);
     //default sensor settings
     resolution = 7;
     awareness = 360;
-    range = 20;
+    range = 30;
     //create the sensing circle and adjust the lighting and texture
     circle = smgr->addBillboardSceneNode(body, dimension2df(range*2,range*2));
     circle->setMaterialType(EMT_TRANSPARENT_ALPHA_CHANNEL);
@@ -40,10 +40,11 @@ Agent::Agent(IrrlichtDevice* d, stringw mesh, stringw t, stringw h, vector3df p)
     body->updateAbsolutePosition();
     won = false;
     remove = true;
+    stuck = 0;
 }
 
 Agent::Agent(IrrlichtDevice* d, stringw mesh, stringw t, stringw h, vector3df p, AIBrain b)
- : device(d), path(h), texture(t), wheel(120,40,10), brain(b)
+ : device(d), path(h), texture(t), wheel(180,40,40), brain(b)
 {
     //initialize naming short cuts
     driver = device->getVideoDriver();
@@ -73,6 +74,7 @@ Agent::Agent(IrrlichtDevice* d, stringw mesh, stringw t, stringw h, vector3df p,
     body->updateAbsolutePosition();
     won = false;
     remove = true;
+    stuck = 0;
 }
 
 Agent::~Agent()
@@ -112,7 +114,7 @@ vector<f32> Agent::DrawFeelers(bool debug)
    }
 
     vector<f32>::iterator it = endpoints.end();
-    for(  int i = begin; i <= end; i += step)
+    for(s32 i = begin; i <= end; i += step)
     {
         line3d<f32> line;
         //start at the center of the agent
@@ -308,7 +310,7 @@ void Agent::SetRange(u32 r)
 void Agent::SetAwareness(u32 a)
 {  awareness = a;  }
 
-bool Agent::MoveVector(vector3df distance)
+vector<f32> Agent::MoveVector(vector3df distance)
 {
     // remember old values
     u32 old_awareness = awareness;
@@ -344,17 +346,38 @@ bool Agent::MoveVector(vector3df distance)
         moved = false;
         body->setPosition(old_position);
     }
-    else
-    {
-        moved = true;
-    }
+   else
+   {
+      line3d<f32> line;
+      //start at old position
+      line.start = old_position;
+      //end at the new position
+      line.end = old_position + distance;
+      vector3df point;
+      triangle3df outtri;
+      //draw relative to absolute coordinates
+      driver->setTransform(video::ETS_WORLD, matrix4());
+
+      if(cmgr->getSceneNodeAndCollisionPointFromRay(line, point, outtri))
+		{  //new position is not in line of sight of old position, so we
+         //move only to the collision point - range
+         vector3df d(distance);
+         d.normalize();
+         d *= range;
+         body->setPosition(point - d);
+      }
+
+      moved = true;
+   }
 
     // reset to orignal values
     awareness = old_awareness;
     range = old_range;
     resolution = old_resolution;
+    if(!moved)
+    {  cpoints.clear();  }
 
-    return moved;
+    return cpoints;
 }
 
 void Agent::Update(void)
@@ -387,12 +410,15 @@ void Agent::Think(vector<f32> feelers)
       vector<f64> output = brain.ChangeGoal(feelers);
 
       //the last output is whether or not to create a subgoal
-      if(output.back() > 0.5)
+      if(output.back() > 0.5 || stuck > 0)
       {  //make sure we keep the original goal
          if(route.empty())
          {  route.push_back(wheel.GetGoal());  }
+         s32 sign = 1;
+         if(stuck > 0)
+         {  sign = -1;  }
          //new goal in a direction determined by output
-         wheel.SetGoal(vector3df(range/2 - range*output.at(0), 0, range/2 - range*output.at(1)));
+         wheel.SetGoal(vector3df(range/2 - sign*range*output.at(0), 0, range/2 - sign*range*output.at(1)));
       }
 
       //calculate next step to goal or subgoal
@@ -400,13 +426,14 @@ void Agent::Think(vector<f32> feelers)
    }
    else if(!route.empty())
    {  //we found the subgoal, back to the original goal
-      wheel.SetGoal(route.at(0));
+      wheel.SetGoal(route.front());
       route.erase(route.begin());
       wheel.NextStep(bodytrans);;
    }
    else if(!won)
    {  //we found the original goal, update end clock time if not done
       won = true;
+      stuck = 0;
       clock_gettime(CLOCK_REALTIME, &gend);
    }
 }
@@ -417,30 +444,36 @@ void Agent::Act(void)
    {
       //Set rotation and attempt to move to position (checks for collisions)
       body->setRotation(body->getRotation() + wheel.GetRotation());
-      MoveVector(wheel.GetStep());
+      if(!MoveVector(wheel.GetStep()).empty())
+      {  stuck = 0;  }
+      else
+      {  stuck++;  }
    }
 }
 
-void Agent::Seek(vector3df goal, bool track)
+void Agent::Seek(vector3df goal, Wall *w, bool track)
 {
+   route = w->AStar(body->getPosition(), goal);
    route.push_back(goal);
    if(track)  //only track the goal passed in from game
    {  clock_gettime(CLOCK_REALTIME, &gstart);  }
+   stuck = 0;
 }
 
-
-u32 Agent::GetFitness(vector3df goal)
+u32 Agent::GetFitness(vector3df goal, vector3df startpos)
 {
    u32 fitness = 0;
 
    if(won)
    {  //this individual found the goal for this start vector
       f64 interval = (gend.tv_sec - gstart.tv_sec) + ((gend.tv_nsec - gstart.tv_nsec)/1000000000.00);
-      fitness = 10000 - interval * 10;
+      fitness = 5000 - interval * 3;
    }
    else
    {  //did not find the goal
-      fitness = 1000 - (goal - body->getAbsoluteTransformation().getTranslation()).getLength();
+      fitness = 1000 - (goal - body->getAbsoluteTransformation().getTranslation()).getLength()
+         + (startpos - body->getAbsoluteTransformation().getTranslation()).getLength();
+      fitness /= (stuck + 1);
    }
 
    return fitness;
@@ -453,5 +486,29 @@ void Agent::GameOver(void)
 
 AIBrain Agent::GetBrain(void)
 {  return brain;  }
+
+void Agent::SmartNavigate(void)
+{
+   matrix4 bodytrans = body->getAbsoluteTransformation();
+   if(wheel.HasGoal())
+   {
+       //Set rotation and attempt to move to position (checks for collisions)
+      body->setRotation(body->getRotation() + wheel.GetRotation());
+      if(!MoveVector(wheel.GetStep()).empty())
+      {
+         //make sure we keep the original goal
+         //if(route.empty())
+         //{  route.push_back(wheel.GetGoal());  }
+
+      }
+      wheel.NextStep(bodytrans);
+   }
+   else if(!route.empty())
+   {  //we found the subgoal, back to the original goal
+      wheel.SetGoal(route.front());
+      route.erase(route.begin());
+      wheel.NextStep(bodytrans);;
+   }
+}
 
 }

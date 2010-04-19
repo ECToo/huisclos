@@ -15,7 +15,7 @@ const char *GameException::Message(void) const
 
 bool Game::exists = false;
 
-Game::Game()
+Game::Game() : wall(NULL)
 {
    if(exists)
    {  throw GameException("ERROR: Only one cj::Game can exist!");  }
@@ -40,12 +40,15 @@ Game::~Game()
       }
    }
 
+   if(wall)
+   {  delete wall;  }
+
    exists = false;
 }
 
 void Game::Init(void)
 {
-   device = createDevice(EDT_OPENGL, dimension2d<u32>(1280, 720), 16);
+   device = createDevice(EDT_OPENGL, dimension2d<u32>(680, 420), 16);
 
    if (device == 0)
    {  throw GameException("ERROR: Device creation failed!");  }
@@ -55,16 +58,17 @@ void Game::Init(void)
    guienv = device->getGUIEnvironment();
    device->setWindowCaption(L"Assignment 2 Demo");
    smgr->addCameraSceneNode(0, vector3df(0,200,0), vector3df(0,0,0));
-   Wall wall(device, "t351sml.jpg");
-   wall.makeWall(1,20,vector3df(0,0,20));
-   wall.makeWall(1,20,vector3df(70,0,50));
-   wall.makeWall(10,1,vector3df(0,0,-20));
-   wall.makeWall(1,20,vector3df(-75,0,50));
-   population = 100;
-   gen_gap = 10;
+   wall = new Wall(device, "t351sml.jpg");
+   wall->makeWall(1,1,vector3df(0,0,0));
+   wall->makeWall(1,20,vector3df(0,0,20));
+   wall->makeWall(1,20,vector3df(70,0,50));
+   wall->makeWall(10,1,vector3df(0,0,-20));
+   wall->makeWall(1,20,vector3df(-75,0,50));
+   population = 1;
+   gen_gap = 20;
    generation = 1;
    startvector = vector3df(40,0,0);
-   //mark the target with a red circle
+   // mark the target with a red circle
    IBillboardSceneNode *circle = smgr->addBillboardSceneNode(0, dimension2df(10,10), vector3df(-50,0,0));
    circle->setMaterialType(EMT_TRANSPARENT_ALPHA_CHANNEL);
    circle->setMaterialFlag(EMF_LIGHTING, false);
@@ -77,8 +81,8 @@ void Game::Init(void)
       //initial population
       for(u16 i = 0; i < population; i++)
       {
-         agents.push_back(new cj::Agent(device, "faerie.md2", "", "", startvector));
-         agents[i]->Seek(vector3df(-50,0,0), true);
+         agents.push_back(new cj::Agent(device, "faerie.md2", "Faerie5.BMP", "", startvector));
+         agents[i]->Seek(vector3df(-50,0,0), wall, true);
          totscores.push_back(0);
       }
    }
@@ -100,7 +104,7 @@ void Game::Init(void)
          std::cout << std::endl;
          AIBrain b(mymind);
          agents.push_back(new cj::Agent(device, "faerie.md2", "", "", startvector,b));
-         agents[j]->Seek(vector3df(-50,0,0), true);
+         agents[j]->Seek(vector3df(-50,0,0), wall, true);
          totscores.push_back(0);
          mymind.clear();
       }
@@ -118,7 +122,9 @@ void Game::Run(void)
    {
       driver->beginScene(true, true, SColor(255,120,102,136));
       guienv->drawAll();
-      Tick();
+      agents[0]->SmartNavigate();
+      //Tick();
+      //wall->DrawNodes();
       smgr->drawAll();
       driver->endScene();
    }
@@ -176,7 +182,7 @@ void Game::NewGeneration(void)
 
    for(u32 j = 0; j < agents.size(); j++)
    {
-      scores[j] = agents.at(j)->GetFitness(vector3df(-50,0,0));
+      scores[j] = agents.at(j)->GetFitness(vector3df(-50,0,0), startvector);
       totscores[j] += scores[j];
    }
 
@@ -250,7 +256,7 @@ void Game::NewGeneration(void)
    for(u16 i = 0; i < population; i++)
    {
       agents.at(i)->Reset(startvector, *(minds.at(i)));
-      agents.at(i)->Seek(vector3df(-50,0,0), true);
+      agents.at(i)->Seek(vector3df(-50,0,0), wall, true);
    }
 
    generation++;

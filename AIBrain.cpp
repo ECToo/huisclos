@@ -3,7 +3,7 @@
 namespace cj
 {
 
-const u16 AIBrain::HIDDEN = 7;
+const u16 AIBrain::HIDDEN = 10;
 const u16 AIBrain::INPUTS = 10;
 const u16 AIBrain::OUTPUTS = 3;
 const u16 AIBrain::MAX_WEIGHT = 100;

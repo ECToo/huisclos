@@ -48,6 +48,7 @@ class Game
       vector3df startvector;  //agents start at this location
       vector<u32> totscores;  //total scores
       ofstream myfile;
+      Wall* wall;
 
       void Init(void);  // Initialize game
       void Run(void);  // Run game

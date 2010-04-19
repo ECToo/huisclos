@@ -3,10 +3,12 @@
 
 #include <irrlicht.h>
 #include <vector>
+#include <list>
 #include <iostream>
 #include <sys/time.h>
 #include "SteeringBehavior.hpp"
 #include "AIBrain.hpp"
+#include "Wall.hpp"
 
 using namespace irr;
 using namespace irr::core;
@@ -38,14 +40,15 @@ class Agent
       void SetResolution(u32 r);  //change resolution
       void SetRange(u32 r);  //change range
       void SetAwareness(u32 a);  //change awareness
-      bool MoveVector(vector3df distance);  //COLLISON MOVEMENT
+      vector<f32> MoveVector(vector3df distance);  //COLLISON MOVEMENT
 		IAnimatedMeshSceneNode* getBody(void);  //return the scene node
 		void Update(void);  //sense,think,act
-		void Seek(vector3df goal, bool track = false);  //go to a point
-		u32 GetFitness(vector3df goal);  //score for reaching goal
+		void Seek(vector3df goal, Wall *w, bool track = false);  //go to a point
+		u32 GetFitness(vector3df goal, vector3df startpos);  //score for reaching goal
 		void GameOver(void);
 		AIBrain GetBrain(void);  //for baby making
 		void Reset(vector3df p, AIBrain b);
+		void SmartNavigate(void);
 
    private:
 		static s32 nextAvailableID;
@@ -61,12 +64,13 @@ class Agent
       stringw path;  //directory of textures
       stringw texture;  //path+file of the body's texture
       SteeringBehavior wheel;  //for seek function
-      vector<vector3df> route;  //stack of subgoals
+      std::list<vector3df> route;  //stack of subgoals
       AIBrain brain;  //neural network
       timespec gstart;  //start time of goal
       timespec gend;  //end time, found goal
       bool won;  //goal is reached
       bool remove;
+      int stuck;
 
       vector<f32> Sense(void);  //look for walls
       void Think(vector<f32> feelers); //strategize for walls
