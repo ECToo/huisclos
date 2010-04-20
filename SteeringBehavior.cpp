@@ -15,7 +15,7 @@ void SteeringBehavior::SetGoal(vector3df g)
 {
    done = false;
    goal = g;
-   velocity = vector3df(0,0,0);
+   step = position = rotate = heading = velocity = vector3df(0,0,0);
    //Timestamp of start time recorded as the time of the last step
    clock_gettime(CLOCK_REALTIME, &lastStep);
 }
@@ -51,7 +51,7 @@ void SteeringBehavior::NextStep(matrix4 transform)
    f64 magnitude = target.getLength();
 
    //if disance or velocity are non-zero
-   if(magnitude > EPSILON || velocity.getLength() > EPSILON)
+   if(magnitude > EPSILON)
    {
       //find the amount of rotation
       f32 r = CalcRotation(target);
@@ -69,6 +69,7 @@ void SteeringBehavior::NextStep(matrix4 transform)
    {  //else, we are there
       step = goal - position;
       velocity = vector3df(0,0,0);
+      rotate = vector3df(0,0,0);
       done = true;
    }
 
@@ -115,12 +116,16 @@ bool SteeringBehavior::CalcVelocity(vector3df target, f32 r)
    //Scale acceleration according to how far off our heading is from the target
    r /= interval;
    //This favors rotation over increasing velocity
-   f32 maxacc = MAXACCEL - (MAXACCEL * r/MAXROTATE);
+   f32 maxacc = MAXACCEL;
+   if(r > EPSILON)
+   {  maxacc = 0;  }
+   else if(target.getLength() + velocity.getLength()*interval < EPSILON)
+   {  maxacc = -MAXACCEL;  }
 
    //If we reach the goal on the next step
-   if(distance + EPSILON < velmag * interval)
+   if(distance + EPSILON < velmag * interval + MAXACCEL * interval)
    {
-      velocity = vector3df(0,0,0);
+      rotate = velocity = vector3df(0,0,0);
       step = goal - position;
       go = false;
    }

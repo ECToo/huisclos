@@ -59,17 +59,16 @@ void Game::Init(void)
    device->setWindowCaption(L"Assignment 2 Demo");
    smgr->addCameraSceneNode(0, vector3df(0,200,0), vector3df(0,0,0));
    wall = new Wall(device, "t351sml.jpg");
-   wall->makeWall(1,1,vector3df(0,0,0));
    wall->makeWall(1,20,vector3df(0,0,20));
    wall->makeWall(1,20,vector3df(70,0,50));
    wall->makeWall(10,1,vector3df(0,0,-20));
    wall->makeWall(1,20,vector3df(-75,0,50));
-   population = 1;
+   population = 6;
    gen_gap = 20;
    generation = 1;
    startvector = vector3df(40,0,0);
    // mark the target with a red circle
-   IBillboardSceneNode *circle = smgr->addBillboardSceneNode(0, dimension2df(10,10), vector3df(-50,0,0));
+   IBillboardSceneNode *circle = smgr->addBillboardSceneNode(0, dimension2df(10,10), vector3df(-50,0,-50));
    circle->setMaterialType(EMT_TRANSPARENT_ALPHA_CHANNEL);
    circle->setMaterialFlag(EMF_LIGHTING, false);
    circle->setMaterialTexture(0, driver->getTexture("circle.png"));
@@ -82,9 +81,12 @@ void Game::Init(void)
       for(u16 i = 0; i < population; i++)
       {
          agents.push_back(new cj::Agent(device, "faerie.md2", "Faerie5.BMP", "", startvector));
-         agents[i]->Seek(vector3df(-50,0,0), wall, true);
+         //agents[i]->Seek(vector3df(-50,0,0), wall, false);
          totscores.push_back(0);
       }
+      agents[0]->Seek(vector3df(-50,0,-50), wall, true);
+      agents[1]->Seek(vector3df(-50,0,-50), wall, false);
+      agents[2]->Seek(vector3df(-50,0,-50), wall, false);
    }
    else
    {
@@ -118,11 +120,30 @@ void Game::Init(void)
 
 void Game::Run(void)
 {
+   int lastFPS = 0;
    while(device->run() && driver)
    {
       driver->beginScene(true, true, SColor(255,120,102,136));
       guienv->drawAll();
-      agents[0]->SmartNavigate();
+      int fps = driver->getFPS();
+      if (lastFPS != fps)
+                        {
+                                core::stringw str = L"Demo A* [";
+                                str += driver->getName();
+                                str += "] FPS:";
+                                str += fps;
+
+                                device->setWindowCaption(str.c_str());
+                                lastFPS = fps;
+                        }
+
+      //agents[0]->SmartNavigate();
+      //agents[0]->Seek(vector3df(-50,0,-50), wall, false);
+      //agents[1]->Seek(vector3df(-50,0,-50), wall, false);
+      //agents[2]->Seek(vector3df(-50,0,-50), wall, false);
+      //agents[3]->Seek(vector3df(-50,0,-50), wall, false);
+      //agents[4]->Seek(vector3df(-50,0,-50), wall, false);
+      //agents[5]->Seek(vector3df(-50,0,-50), wall, false);
       //Tick();
       //wall->DrawNodes();
       smgr->drawAll();
