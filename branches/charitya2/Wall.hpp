@@ -23,8 +23,11 @@ struct GraphNode
    GraphNode* connection[8];
    GraphNode* back;
    f32 score;
-   bool isWall;
+   f32 count;
+   s32 isWall;
 };
+
+const f32 SQRT2 = sqrt(2);
 
 class Wall
 {
@@ -33,8 +36,8 @@ class Wall
       ~Wall();
       void makeWall(u32 length, u32 width, vector3df position); //create a long wall
       void DrawNodes(void);
-      GraphNode* FindNode(s32 x, s32 z);
-      std::list<vector3df> AStar(vector3df start, vector3df goal, bool smooth = true);
+      GraphNode* FindCloseNode(s32 x, s32 z);
+      std::list<vector3df> AStar(vector3df start, vector3df goal, bool debug = false);
 
    private:
       void addNode(u32 size, vector3df position); //creates a cube of size and places it at position
@@ -42,6 +45,7 @@ class Wall
       void InsertPath(s32 x, s32 z);
       GraphNode* NotWall(vector3df p);
       void InsertList(std::list<GraphNode*> &glist, GraphNode* node);
+      GraphNode* FindNode(s32 x, s32 z);
 
       vector<IMeshSceneNode*> frame; //contains cubes created by addNode
       IrrlichtDevice *device; //get driver and smgr from this

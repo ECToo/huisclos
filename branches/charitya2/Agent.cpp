@@ -10,7 +10,7 @@ s32 Agent::genID()
 {  return ++nextAvailableID;  }
 
 Agent::Agent(IrrlichtDevice* d, stringw mesh, stringw t, stringw h, vector3df p)
- : device(d), path(h), texture(t), wheel(180,40,40)
+ : device(d), path(h), texture(t), wheel(360,80,40)
 {
     //initialize naming short cuts
     driver = device->getVideoDriver();
@@ -44,7 +44,7 @@ Agent::Agent(IrrlichtDevice* d, stringw mesh, stringw t, stringw h, vector3df p)
 }
 
 Agent::Agent(IrrlichtDevice* d, stringw mesh, stringw t, stringw h, vector3df p, AIBrain b)
- : device(d), path(h), texture(t), wheel(180,40,40), brain(b)
+ : device(d), path(h), texture(t), wheel(360,80,40), brain(b)
 {
     //initialize naming short cuts
     driver = device->getVideoDriver();
@@ -318,7 +318,7 @@ vector<f32> Agent::MoveVector(vector3df distance)
     u32 old_resolution = resolution;
     // to speed up collision detection and make sure we detect from all angles
     awareness = 360;
-    range = 5;
+    range = 7;
     resolution = 7;
     // record success or failure of movement
     bool moved = false;
@@ -453,7 +453,7 @@ void Agent::Act(void)
 
 void Agent::Seek(vector3df goal, Wall *w, bool track)
 {
-   route = w->AStar(body->getPosition(), goal);
+   route = w->AStar(body->getPosition(), goal, track);
    route.push_back(goal);
    if(track)  //only track the goal passed in from game
    {  clock_gettime(CLOCK_REALTIME, &gstart);  }

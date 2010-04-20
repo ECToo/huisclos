@@ -21,10 +21,11 @@ void Wall::addNode(u32 size, vector3df position)
 // creates a cube of size and places it at position
 {
    bool exists;
+   GraphNode* n = NULL;
 
    try{
-      GraphNode* n = FindNode(position.X, position.Z);
-      exists = n->isWall && (n->point.X == position.X) && (n->point.Z == position.Z);
+      n = FindNode(position.X, position.Z);
+      exists = (n->isWall == 2) && (n->point.X == position.X) && (n->point.Z == position.Z);
    }
    catch(out_of_range e)
    {  exists = false;  }
@@ -32,7 +33,15 @@ void Wall::addNode(u32 size, vector3df position)
    if(!exists)
    {
       ExpandSpace(position);
-      FindNode(position.X, position.Z)->isWall = true;
+      n = FindNode(position.X, position.Z);
+      n->isWall = 2;
+
+      for(s32 i = 0; i < 8; i++)
+      {
+         if(n->connection[i])
+         {  n->connection[i]->isWall = 1;  }
+      }
+
       // add a wall node to the list
       frame.push_back(smgr->addCubeSceneNode(size, 0, -1, position));
       // set the texture
@@ -66,9 +75,9 @@ void Wall::makeWall(u32 length, u32 width, vector3df position)
 
 void Wall::ExpandSpace(vector3df a)
 {
-   if(xpos < a.X + dsize)
+   if(xpos < a.X + 2*dsize)
    {
-      s32 newxpos = a.X + dsize;
+      s32 newxpos = a.X + 2*dsize;
       newxpos += newxpos % dsize;
 
       for(s32 i = xpos; i <= newxpos; i += dsize)
@@ -82,9 +91,9 @@ void Wall::ExpandSpace(vector3df a)
       xpos = newxpos;
    }
 
-   if(xneg > a.X - dsize)
+   if(xneg > a.X - 2*dsize)
    {
-      s32 newxneg = a.X - dsize;
+      s32 newxneg = a.X - 2*dsize;
       newxneg -= abs(newxneg) % dsize;
 
       for(s32 i = xneg; i >= newxneg; i -= dsize)
@@ -98,9 +107,9 @@ void Wall::ExpandSpace(vector3df a)
       xneg = newxneg;
    }
 
-   if(zpos < a.Z + dsize)
+   if(zpos < a.Z + 2*dsize)
    {
-      s32 newzpos = a.Z + dsize;
+      s32 newzpos = a.Z + 2*dsize;
       newzpos += newzpos % dsize;
 
       for(s32 i = zpos; i <= newzpos; i += dsize)
@@ -115,9 +124,9 @@ void Wall::ExpandSpace(vector3df a)
       zrange = abs((zneg - zpos)/dsize) + 1;
    }
 
-   if(zneg > a.Z - dsize)
+   if(zneg > a.Z - 2*dsize)
    {
-      s32 newzneg = a.Z - dsize;
+      s32 newzneg = a.Z - 2*dsize;
       newzneg -= abs(newzneg) % dsize;
 
       for(s32 i = zneg; i >= newzneg; i -= dsize)
@@ -146,9 +155,10 @@ void Wall::InsertPath(s32 x, s32 z)
    {
       GraphNode* newnode = new GraphNode;
       newnode->point = vector3df(x, 0, z);
-      newnode->isWall = false;
+      newnode->isWall = 0;
       newnode->back = NULL;
       newnode->score = -1;
+      newnode->count = -1;
       s32 dx[] = {dsize, dsize, 0, -dsize, -dsize, -dsize, 0, dsize};
       s32 dz[] = {0, -dsize, -dsize, -dsize, 0, dsize, dsize, dsize};
 
@@ -206,13 +216,28 @@ GraphNode* Wall::FindNode(s32 x, s32 z)
    return paths.at(i);
 }
 
-std::list<vector3df> Wall::AStar(vector3df start, vector3df goal, bool smooth)
+GraphNode* Wall::FindCloseNode(s32 x, s32 z)
+{
+   x = round(x/dsize) * dsize;
+   z = round(z/dsize) * dsize;
+   if(x < xneg)
+   {  x = xneg;  }
+   if(x > xpos)
+   {  x = xpos;  }
+   if(z < zneg)
+   {  z = zneg;  }
+   if(z > zpos)
+   {  z = zpos;  }
+   s32 i = ((x-xneg)/dsize)*zrange + (z-zneg)/dsize;
+   return paths.at(i);
+}
+
+std::list<vector3df> Wall::AStar(vector3df start, vector3df goal, bool debug)
 {
    std::list<vector3df> waypoints;
 
    if(paths.empty())
    {
-      waypoints.push_back(start);
       waypoints.push_back(goal);
       cerr << "ERROR: paths empty\n";
       return waypoints;
@@ -228,6 +253,7 @@ std::list<vector3df> Wall::AStar(vector3df start, vector3df goal, bool smooth)
    }
 
    gstart->back = NULL;
+   gstart->count = 0;
    gstart->score = fabs(ggoal->point.X - gstart->point.X + ggoal->point.Z - gstart->point.Z);
    std::list<GraphNode*> open;
    open.push_front(gstart);
@@ -237,7 +263,7 @@ std::list<vector3df> Wall::AStar(vector3df start, vector3df goal, bool smooth)
    while(!open.empty())
    {
       current = open.front();
-      cout << "Checking (" << current->point.X << " " << current->point.Z << ")\n";
+      //cout << "Checking (" << current->point.X << " " << current->point.Z << ")\n";
       open.pop_front();
 
       for(s32 i = 0; i < 8; i++)
@@ -245,25 +271,35 @@ std::list<vector3df> Wall::AStar(vector3df start, vector3df goal, bool smooth)
          if(current->connection[i] && !(current->connection[i]->isWall) && current->connection[i]->score == -1)
          {
             current->connection[i]->back = current;
-            current->connection[i]->score =
+            if(i % 2)
+            {  current->connection[i]->count = current->count + SQRT2 * dsize;  }
+            else
+            {  current->connection[i]->count = current->count + dsize;  }
+            current->connection[i]->score = current->connection[i]->count +
                fabs(ggoal->point.X - current->connection[i]->point.X)
                + fabs(ggoal->point.Z - current->connection[i]->point.Z);
             InsertList(open,current->connection[i]);
-            cout << "Adding (" << current->connection[i]->point.X << " " << current->connection[i]->point.Z << ")\n";
+            //cout << "Adding (" << current->connection[i]->point.X << " " << current->connection[i]->point.Z << ")\n";
          }
       }
 
       closed.push_back(current);
-      if(current->score == 0)
+      if(current->point.X == ggoal->point.X && current->point.Z == ggoal->point.Z)
       {
+         waypoints.push_front(goal);
          while(current)
          {
             waypoints.push_front(current->point);
-            cout << "(" << current->point.X << " " << current->point.Z << ")\n";
-            IBillboardSceneNode *circle = smgr->addBillboardSceneNode(0, dimension2df(10,10), current->point);
-            circle->setMaterialType(EMT_TRANSPARENT_ALPHA_CHANNEL);
-            circle->setMaterialFlag(EMF_LIGHTING, false);
-            circle->setMaterialTexture(0, driver->getTexture("circle.png"));
+            //cout << "(" << current->point.X << " " << current->point.Z << ")\n";
+
+            if(debug)
+            {
+               IBillboardSceneNode *circle = smgr->addBillboardSceneNode(0, dimension2df(dsize,dsize), current->point);
+               circle->setMaterialType(EMT_TRANSPARENT_ALPHA_CHANNEL);
+               circle->setMaterialFlag(EMF_LIGHTING, false);
+               circle->setMaterialTexture(0, driver->getTexture("circle.png"));
+            }
+
             current = current->back;
          }
 
@@ -277,6 +313,7 @@ std::list<vector3df> Wall::AStar(vector3df start, vector3df goal, bool smooth)
    {
       (*it)->score = -1;
       (*it)->back = NULL;
+      (*it)->count = -1;
    }
 
    return waypoints;
