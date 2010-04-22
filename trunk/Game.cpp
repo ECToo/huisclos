@@ -169,6 +169,168 @@ dpr( "* GAME DTOR " );
 dpr( "* GAME DTOR end" );
 }// ~
 
+Game::GameState Game::getState() const
+{
+	if( gameState == Game::STOP )
+	{	return Game::STOP;	}// if
+	else if( gameState == Game::BREAK )
+	{	return Game::BREAK;	}// elif
+	else if(device().isWindowActive())
+	{	return Game::RUN;	}// elif
+	else
+	{	return Game::INTERRUPT;	}// else
+}// getState()
+
+void Game::breakToShell()
+{
+dpr( "Breaking." );
+	assert( hasBeenRun );
+	assert( getState() == Game::RUN );
+	assert( !device().getTimer()->isStopped() );
+	gameState = Game::BREAK;
+	device().getTimer()->stop();
+}// breakToShell()
+void Game::resume()
+{
+dpr( "Resuming (un-breaking?)..." );
+	assert( hasBeenRun );
+	assert( getState() == Game::BREAK );
+	assert( device().getTimer()->isStopped() );
+	//gameState = Game::RUN;
+	device().getTimer()->start();
+
+	run();
+}// resume()
+
+// id=mode, id=viewmode
+Game::ViewMode Game::getViewMode() const
+{
+	assert( getIsPCSet() || viewMode != Game::FIRST_PERSON );
+	return viewMode;
+}//
+void Game::setViewMode( Game::ViewMode mode )
+{
+	if( camera ) { camera->remove(); }// if
+	switch( mode )
+	{
+		case Game::BIRDS_EYE:
+			camera = smgr().addCameraSceneNode(0, vector3df(0,200,0), vector3df(0,0,0));
+			break;
+		case Game::FIRST_PERSON:
+			assert( getIsPCSet() );
+			camera = smgr().addCameraSceneNode( 0, vector3df(0,20,0) );
+			//camera = smgr().addCameraSceneNode( &getPC().getBody(), vector3df(0,20,0), getPC().getBody().getRotation() );
+			cam().bindTargetAndRotation(true);
+			break;
+	}// sw
+	assert( camera );
+	viewMode = mode;
+}// setViewMode()
+
+IrrlichtDevice& Game::device()
+{
+	assert( irrDevice );
+	return *irrDevice;
+}
+IVideoDriver& Game::driver()
+{
+	assert( videoDriver );
+	return *videoDriver;
+ }
+ISceneManager& Game::smgr()
+{
+	assert( sceneManager );
+	return *sceneManager;
+}
+irr::gui::IGUIEnvironment& Game::guienv ()
+{
+	assert( guiEnvironment );
+	return *guiEnvironment;
+}
+
+const IrrlichtDevice& Game::device() const
+{
+	assert( irrDevice );
+	return *irrDevice;
+}
+const IVideoDriver& Game::driver() const
+{
+	assert( videoDriver );
+	return *videoDriver;
+}
+const ISceneManager& Game::smgr() const
+{
+	assert( sceneManager );
+	return *sceneManager;
+}
+const irr::gui::IGUIEnvironment& Game::guienv() const
+{
+	assert( guiEnvironment );
+	return *guiEnvironment;
+}
+
+
+//const AgentsList& agents() const;
+//AgentsList& agents();
+const AgentsList& Game::agents() const
+{
+	assert( agentsList );
+	return *agentsList;
+}// agents()
+AgentsList& Game::agents()
+{
+	assert( agentsList );
+	return *agentsList;
+}// agents()
+
+const WallsList& Game::walls() const
+{
+	assert( wallsList );
+	return *wallsList;
+}// walls() walls()
+WallsList& Game::walls()
+{
+	assert( wallsList );
+	return *wallsList;
+}// walls()
+
+const cj::event::EventReceiver<Game>& Game::receiver() const
+{
+	assert( eventReceiver );
+	return *eventReceiver;
+}// receiver()
+// TODO: Make private?
+cj::event::EventReceiver<Game>& Game::receiver()
+{
+	assert( eventReceiver );
+	return *eventReceiver;
+}// receiver()
+
+
+const ICameraSceneNode& Game::cam() const
+{
+	assert( camera );
+	return *camera;
+}// cam()
+ICameraSceneNode& Game::cam()
+{
+	assert( camera );
+	return *camera;
+}// cam()
+
+const PersistentActionsList& Game::getPersistentActionsList() const
+{	return persistentActionsList;	}//
+PersistentActionsList& Game::getPersistentActionsList()
+{	return persistentActionsList;	}//
+
+bool Game::getIsPCSet() const
+{	return pc != NULL;	}
+
+const Agent& Game::getPC() const
+{	return *pc;	}
+Agent& Game::getPC()
+{	return *pc;	}
+
 // id=setpc
 void Game::setPC( Agent& agent )
 {
@@ -334,6 +496,10 @@ dpr( "Game::addAgent" );
 	return *pNewagent;
 }// addAgent()
 
+Agent& Game::addAgent( const vector3df& position )
+{
+	return addAgent( smgr().getMesh(DEFAULT_MESH.c_str()), driver().getTexture(DEFAULT_TEXTURE.c_str()), position, vector3df(0.0f,0.0f,0.0f), vector3df(1.0f, 1.0f, 1.0f) );
+}// addAgent()
 
 // TODO: removeAgent() and removeWall(), both forms, are nearly identical and could be refactored.
 // id=remove-agent
@@ -511,6 +677,23 @@ dpr( "Setting GUI visibility to " << !getGUIVisible() );
 dpr( "... Exiting loop." );
 }// run()
 
+bool Game::getGUIVisible() const
+{	return gui().getVisible();	}// getIsGUIVisible()
+
+void Game::setGUIVisible( bool b  )
+{	gui().setVisible(b);	}// setGUIVisible()
+
+//const NavGraph& Game::getNavGraph() const
+//{
+	//assert( navgraph );
+	//return *navgraph;
+//}// getNavGraph()
+//NavGraph& Game::getNavGraph()
+//{
+	//assert( navgraph );
+	//return *navgraph;
+//}// getNavGraph()
+
 // id=start
 void Game::start()
 {
@@ -653,7 +836,42 @@ void Game::doTickKeyboardIO()
 void Game::doTickAgentsActions()
 {
 	for( AgentsList::iterator it = agents().begin(); it != agents().end(); ++it )
-	{	
+	{
+		// TODO:
+		//// id=FSM tick:
+		//if( agent.getState() == DEAD )
+		//{
+			//// Play dead.
+		//}//
+		//else if( agent.getState() == ATTACK )
+		//{
+			//if( agent.isEnemyVisible() )
+			//{
+				//if( !agent.getAttackTarget() )
+				//{	agent.setAttackTarget( agent.getNearbyRandomEnemy() );	}//
+				//agent.doNextAttack();
+			//}//
+			//else
+			//{
+				//agent.setAttackTarget( NULL );
+				//agent.setState( MOVE );
+			//}//
+		//}//
+		//else if( agent.getState() == MOVE )
+		//{
+			//if( agent.isEnemyVisible() )
+			//{	agent.setState( ATTACK );	}//
+			//else
+			//{
+				//if( !agent.getMoveTarget() )
+				//{	agent.setMoveTarget( agent.getRandomWanderTarget() );	}//
+				//if( agent.hasArrived( agent.getMoveTarget() ) )
+				//{	agent.setMoveTarget( NULL );	}//
+				//else
+				//{	agent.doNextMovement();	}//
+			//}//
+		//}//
+
 		if( !getIsPCSet() || (getPC() != *it) )
 		{	it->doTickActions(static_cast<f32>(curTick - prevTick) / 1000.f);	}// if
 	}// for

@@ -41,12 +41,13 @@ public:
 
 	typedef vector<pointOfInterest> ContactsList;
 
+	enum AgentState { DEAD, ATTACK, MOVE };
+
 	static s32 nextAvailableID;
 	static s32 genID(); // Returns the next unused Agent ID int.
 
 	// id=Ctor
-	//Agent(IrrlichtDevice* d, [>PersistentActionsList& pal,<] stringw mesh, stringw t, stringw h, const absVec& p);
-	Agent(IrrlichtDevice* d, /*PersistentActionsList& pal,*/ stringw mesh, stringw t, stringw h, const vector3df& p);
+	Agent(IrrlichtDevice* d, stringw mesh, stringw t, stringw h, const vector3df& p);
 	// id=DTOR
 	virtual ~Agent();
 
@@ -54,13 +55,7 @@ public:
 	void setPosition( const relVec& dest );
 	// Wrapper for ISceneNode#setAbsolutePosition().
 	void setAbsolutePosition( const absVec& dest );
-	// Idem; for convenience.
 	void setPosition( const absVec& dest );
-
-	//const ActionsList& getActionsList() const
-	//{	return actionsList;	}//
-	//ActionsList& getActionsList()
-	//{	return actionsList;	}//
 
 	relAngle getRotation() const;
 	void setRotation(const relAngle& rot);
@@ -76,16 +71,8 @@ public:
 
 	// ACTIONS:
 	actions::ActAgentSeekPosition* const Goto( const vector3df& dest, f32 speed );
-	// Turn by specified number of degrees at specified rate, degrees per second.
-	//void turn( const relAngle& ang, f32 speed[>FIXME: , IActionLoader* const nextAction = NULL <]);
-	// id=move
-	//actions::ActAgentMove* const move( const relVec& dest, f32 speed[> FIXME: , IActionLoader* const nextAction = NULL <]);
-	// TODO: Small optimization by breaking into two overloaded funcs i/s/o one w/ a default parm:
-	// id=seek
-	//template <typename TAStar> actions::ITickAction* const Seek( const vector3df& dest, f32 speed, const TAStar& callback, bool debug=true );
-	actions::ITickAction* const Seek( const vector3df& dest, f32 speed, const cj::Wall& w, bool debug=true );
-	//actions::ActAgentMove* const seek( const absVec& dest, f32 speed, f32 turnspeed = 0.0[> FIXME: , IActionLoader* const nextAction = NULL<] );
 	template <typename TWaypointsList> actions::ActionSequence* visitWaypoints( const TWaypointsList& pointsList, f32 speed );
+	actions::ITickAction* const Seek( const vector3df& dest, f32 speed, const cj::Wall& w, bool debug=true );
 
 	vector<f32> DrawFeelers(bool debug = false);  //wall collision detection
 	// TODO: Even better: make these func templates taking const_iterators.)
@@ -109,6 +96,9 @@ public:
 	void setRangefinderVisible( bool vis=true ) {	rangefinderVisible = vis;	}//
 	void setRadarVisible( bool vis=true ) {	radarVisible = vis;	}//
 	void setActivationLevelsVisible( bool vis=true ) {	activationLevelsVisible = vis;	}//
+
+	AgentState getState() const;
+	void setState( AgentState& s );
 
 	using sensor::SSensors::setRangefinder;
 	using sensor::SSensors::setRadar;
@@ -168,6 +158,7 @@ private:
 
 	actions::ITickAction* currentAction;
 	actions::ActionsList actionsList;
+	AgentState currentState;
 
 	// Ctor body utility function:
 	void AgentCtorImpl(stringw mesh, const vector3df& p);

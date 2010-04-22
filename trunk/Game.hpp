@@ -87,14 +87,6 @@ namespace cj
 
 		// id=ctor
 		Game();
-		//Game( const irr::video::E_DRIVER_TYPE deviceType = irr::video::EDT_OPENGL,
-			//const irr::core::dimension2d<u32>& windowSize = DEFAULT_RESOLUTION,
-			//u32 bits = 16, bool fullscreen = false,
-			//bool stencilbuffer = false,
-			//bool vsync = false
-		//);
-
-
 		// id=DTOR, id=game-dtor
 		virtual ~Game();
 
@@ -106,182 +98,50 @@ namespace cj
 			INTERRUPT
 		};// enum
 
+		// The keyboard shortcut is <C-d>.  This will end the program unless it is being embedded in a larger process; a Lisp session, for example.
+		void breakToShell();
+		void resume();
+
+		GameState getState() const;
+		
+		// id=mode, id=viewmode
 		enum ViewMode
 		{
 			BIRDS_EYE,
 			FIRST_PERSON
 		};// enum
 
-		// ACCESSORS
-		GameState getState() const
-		{
-			if( gameState == Game::STOP )
-			{	return Game::STOP;	}// if
-			else if( gameState == Game::BREAK )
-			{	return Game::BREAK;	}// elif
-			else if(device().isWindowActive())
-			{	return Game::RUN;	}// elif
-			else
-			{	return Game::INTERRUPT;	}// else
-		}// getState()
+		ViewMode getViewMode() const;
+		void setViewMode( ViewMode mode );
 
-		// The keyboard shortcut is <C-d>.  This will end the program unless it is being embedded in a larger process; a Lisp session, for example.
-		void breakToShell()
-		{
-dpr( "Breaking." );
-			assert( hasBeenRun );
-			assert( getState() == Game::RUN );
-			assert( !device().getTimer()->isStopped() );
-			gameState = Game::BREAK;
-			device().getTimer()->stop();
-		}// breakToShell()
-		void resume()
-		{
-dpr( "Resuming (un-breaking?)..." );
-			assert( hasBeenRun );
-			assert( getState() == Game::BREAK );
-			assert( device().getTimer()->isStopped() );
-			//gameState = Game::RUN;
-			device().getTimer()->start();
-
-			run();
-		}// resume()
-
-		// id=mode, id=viewmode
-		ViewMode getViewMode() const 
-		{	
-			assert( getIsPCSet() || viewMode != Game::FIRST_PERSON );
-			return viewMode;	
-		}// 
-		void setViewMode( ViewMode mode ) 
-		{	
-			if( camera ) { camera->remove(); }// if
-			switch( mode )
-			{
-				case Game::BIRDS_EYE:
-					camera = smgr().addCameraSceneNode(0, vector3df(0,200,0), vector3df(0,0,0));
-					break;
-				case Game::FIRST_PERSON:
-					assert( getIsPCSet() );
-					camera = smgr().addCameraSceneNode( 0, vector3df(0,20,0) );
-					//camera = smgr().addCameraSceneNode( &getPC().getBody(), vector3df(0,20,0), getPC().getBody().getRotation() );
-					cam().bindTargetAndRotation(true);
-					break;
-			}// sw
-			assert( camera );
-			viewMode = mode;	
-		}// setViewMode()
-
-		IrrlichtDevice& device()
-		{
-			assert( irrDevice );
-			return *irrDevice;
-		}
-		IVideoDriver& driver()
-		{
-			assert( videoDriver );
-			return *videoDriver;
-		 }
-		ISceneManager& smgr()
-		{
-			assert( sceneManager );
-			return *sceneManager;
-		}
-		irr::gui::IGUIEnvironment& guienv ()
-		{
-			assert( guiEnvironment );
-			return *guiEnvironment;
-		}
-
-		const IrrlichtDevice& device() const
-		{
-			assert( irrDevice );
-			return *irrDevice;
-		}
-		const IVideoDriver& driver() const
-		{
-			assert( videoDriver );
-			return *videoDriver;
-		}
-		const ISceneManager& smgr() const
-		{
-			assert( sceneManager );
-			return *sceneManager;
-		}
-		const irr::gui::IGUIEnvironment& guienv() const
-		{
-			assert( guiEnvironment );
-			return *guiEnvironment;
-		}
-
+		IrrlichtDevice& device();
+		IVideoDriver& driver();
+		ISceneManager& smgr();
+		irr::gui::IGUIEnvironment& guienv ();
+		const IrrlichtDevice& device() const;
+		const IVideoDriver& driver() const;
+		const ISceneManager& smgr() const;
+		const irr::gui::IGUIEnvironment& guienv() const;
 
 		//const AgentsList& agents() const;
 		//AgentsList& agents();
-		const AgentsList& agents() const
-		{
-			assert( agentsList );
-			return *agentsList;
-		}// agents()
-		AgentsList& agents()
-		{
-			assert( agentsList );
-			return *agentsList;
-		}// agents()
-
-		const WallsList& walls() const
-		{
-			assert( wallsList );
-			return *wallsList;
-		}// walls() walls()
-		WallsList& walls()
-		{
-			assert( wallsList );
-			return *wallsList;
-		}// walls()
-
-		const cj::event::EventReceiver<Game>& receiver() const
-		{
-			assert( eventReceiver );
-			return *eventReceiver;
-		}// receiver()
+		const AgentsList& agents() const;
+		AgentsList& agents();
+		const WallsList& walls() const;
+		WallsList& walls();
+		const cj::event::EventReceiver<Game>& receiver() const;
 		// TODO: Make private?
-		cj::event::EventReceiver<Game>& receiver()
-		{
-			assert( eventReceiver );
-			return *eventReceiver;
-		}// receiver()
+		cj::event::EventReceiver<Game>& receiver();
+		const ICameraSceneNode& cam() const;
+		ICameraSceneNode& cam();
 
+		const PersistentActionsList& getPersistentActionsList() const;
+		PersistentActionsList& getPersistentActionsList();
 
-		const ICameraSceneNode& cam() const
-		{
-			assert( camera );
-			return *camera;
-		}// cam()
-		 ICameraSceneNode& cam()
-		{
-			assert( camera );
-			return *camera;
-		}// cam()
-
-
-		 // TODO: Reenable if necess:
-		//const ActionsList& getActionsList() const
-		//{	return actionsList;	}//
-		//ActionsList& getActionsList()
-		//{	return actionsList;	}//
-		const PersistentActionsList& getPersistentActionsList() const
-		{	return persistentActionsList;	}//
-		PersistentActionsList& getPersistentActionsList()
-		{	return persistentActionsList;	}//
-
-		// Is a PC currently defined?
-		bool getIsPCSet() const
-		{	return pc != NULL;	}
-
-		const Agent& getPC() const
-		{	return *pc;	}
-		Agent& getPC()
-		{	return *pc;	}
+		// PC predicate:
+		bool getIsPCSet() const;
+		const Agent& getPC() const;
+		Agent& getPC();
 
 		// Takes control of a character w/ the keyboard; pass NULL to unset.
 		void setPC( Agent& agent );
@@ -297,14 +157,6 @@ dpr( "Resuming (un-breaking?)..." );
 		virtual bool getActivation() const;
 
 		// Returns an iterator to the Agent if it be a valid reference.  [Don't know why it wouldn't.].  Or the usual end() iterator on failure.
-		// TODO: Const version.
-		//AgentsList::const_iterator findAgent( const Agent& agent ) const;
-		//AgentsList::iterator findAgent( const Agent& agent );
-
-		//// Wrapper for the above.  May be a waste of space.
-		//AgentsList::const_iterator findPC() const;
-		//AgentsList::iterator findPC();
-		//s32 getPCIndex() const;
 		//inline s32 Game::findAgent( const Agent& agent ) const
 		inline AgentsList::const_iterator findAgent( const Agent& agent ) const
 		{	return find( agents().begin(), agents().end(), agent ); }// findAgent()
@@ -334,8 +186,6 @@ dpr( "Resuming (un-breaking?)..." );
 			return *gameGUI;
 		}// gui()
 
-
-		// TODO: Currently the ID parm is unused.
 		Agent& addAgent(IAnimatedMesh* const mesh,
 			ITexture* const texture,
 			//const absVec& position = absVec(),
@@ -343,20 +193,12 @@ dpr( "Resuming (un-breaking?)..." );
 			const irr::core::vector3df& rotation = irr::core::vector3df(0,0,0),
 			const irr::core::vector3df& scale = irr::core::vector3df(1.0f, 1.0f, 1.0f),
 			ISceneNode* const parent = 0,
-			const s32 id = -1,
+			const s32 id = -1,// TODO: Currently ignored.
 			bool alsoAddIfMeshPointerZero = false);
 		// Idem, quickie lazy version:
-		Agent& addAgent( const vector3df& position = vector3df() )
-		{
-			return addAgent( smgr().getMesh(DEFAULT_MESH.c_str()), driver().getTexture(DEFAULT_TEXTURE.c_str()), position, vector3df(0.0f,0.0f,0.0f), vector3df(1.0f, 1.0f, 1.0f) );
-		}// addAgent()
-		//Agent& addAgent( const absVec& position = absVec() )
-		//{
-			//// TODO: I guess I should put all that other stuff into static consts as well;
-			//return addAgent( smgr().getMesh(DEFAULT_MESH.c_str()), driver().getTexture(DEFAULT_TEXTURE.c_str()), position, vector3df(0.0f,0.0f,0.0f), vector3df(1.0f, 1.0f, 1.0f) );
-		//}// addAgent()
+		Agent& addAgent( const vector3df& position = vector3df() );
 
-		// Removes & deallocates an Agent in O(n).  Do NOT reference an Agent not inscene!
+		// Removes & deallocates an Agent in O(n).  Do NOT reference an Agent not currently in-scene!
 		void removeAgent( Agent& agent );
 		// Idem, but removes the "it'th" Agent.
 		void removeAgent( const AgentsList::iterator& it );
@@ -367,34 +209,19 @@ dpr( "Resuming (un-breaking?)..." );
 		//// Idem: Default wall size, but you want to provide a position.
 		//inline Wall& addWall( const absVec& position )
 		//{	return addWall(1, 1, position);	}// addWall()
-
-
 		void removeWall( Wall& wall );
 		// TODO: iterator v.
 		void removeWall( const WallsList::iterator& it );
 
+		bool getGUIVisible() const;
+		void setGUIVisible( bool b = true );
 
-		bool getGUIVisible() const
-		{	return gui().getVisible();	}// getIsGUIVisible()
-
-		void setGUIVisible( bool b = true )
-		{	gui().setVisible(b);	}// setGUIVisible()
-
-		const NavGraph& getNavGraph() const 
-		{ 
-			assert( navgraph );
-			return *navgraph;
-		}// getNavGraph()
-		NavGraph& getNavGraph()
-		{ 
-			assert( navgraph );
-			return *navgraph;
-		}// getNavGraph()
+		//const NavGraph& getNavGraph() const;
+		//NavGraph& getNavGraph();
 
 		//*** MAIN LOOP:
 		// id=start
 		void start();
-
 
 		// TODO: Put on heap; pass byref w/ a smart-ptr to avoid copying?
 		inline vector<f32> drawFeelers()
