@@ -37,14 +37,14 @@ class Wall
       void makeWall(u32 length, u32 width, vector3df position); //create a long wall
       void DrawNodes(void);
       GraphNode* FindCloseNode(s32 x, s32 z);
-      std::list<vector3df> AStar(vector3df start, vector3df goal, bool debug = false);
+      std::list<vector3df> AStar(const vector3df& start, const vector3df& goal, bool debug = false);
 		bool operator== (const Wall& rhs) const;
 
    private:
-      void addNode(u32 size, vector3df position); //creates a cube of size and places it at position
-      void ExpandSpace(vector3df a);
+      void addNode(u32 size, const vector3df& position); //creates a cube of size and places it at position
+      void ExpandSpace(const vector3df& a);
       void InsertPath(s32 x, s32 z);
-      GraphNode* NotWall(vector3df p);
+      GraphNode* NotWall(const vector3df& p);
       void InsertList(std::list<GraphNode*> &glist, GraphNode* node);
       GraphNode* FindNode(s32 x, s32 z);
 

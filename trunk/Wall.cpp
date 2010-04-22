@@ -20,7 +20,7 @@ Wall::~Wall()
 bool Wall::operator== (const Wall& rhs) const
 {	return &rhs == this;	}// ==()
 
-void Wall::addNode(u32 size, vector3df position)
+void Wall::addNode(u32 size, const vector3df& position)
 // creates a cube of size and places it at position
 {
    bool exists;
@@ -76,7 +76,7 @@ void Wall::makeWall(u32 length, u32 width, vector3df position)
    }
 }
 
-void Wall::ExpandSpace(vector3df a)
+void Wall::ExpandSpace(const vector3df& a)
 {
    if(xpos < a.X + 2*dsize)
    {
@@ -235,7 +235,7 @@ GraphNode* Wall::FindCloseNode(s32 x, s32 z)
    return paths.at(i);
 }
 
-std::list<vector3df> Wall::AStar(vector3df start, vector3df goal, bool debug)
+std::list<vector3df> Wall::AStar(const vector3df& start, const vector3df& goal, bool debug)
 {
    std::list<vector3df> waypoints;
 
@@ -322,7 +322,7 @@ std::list<vector3df> Wall::AStar(vector3df start, vector3df goal, bool debug)
    return waypoints;
 }
 
-GraphNode* Wall::NotWall(vector3df p)
+GraphNode* Wall::NotWall(const vector3df& p)
 {
    vector3df close(round(p.X/dsize)*dsize,0,round(p.Z/dsize)*dsize);
    GraphNode* g = NULL;

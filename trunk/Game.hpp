@@ -76,6 +76,8 @@ namespace cj
 	// id=public
 	public:
 
+		//static std::list<vector3df> AStar( const vector3df& start, const vector3df& dest, bool debug=true );
+
 		// (Used by EventHandler:)
 		template <EGUI_EVENT_TYPE>
 		inline static bool handleIt(IGUIElement* const whateverElement) { return false; }// ⁅Yes, I know 'inline' is redundant.⁆

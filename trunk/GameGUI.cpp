@@ -295,7 +295,8 @@ namespace cj
 					const vector2df position = getSpinBoxCoords();
 					// TODO: Check range on coordinates.
 
-					game.addAgent( game.smgr().getMesh(DEFAULT_MESH.c_str()), game.driver().getTexture(DEFAULT_TEXTURE.c_str()), absVec::from_vector2df(position),/*TRANSPOSE_2D_COORDS_DAMMIT(position.X,position.Y),*/ vector3df(0.0f,0.0f,0.0f), vector3df(1.0f, 1.0f, 1.0f) );
+					game.addAgent( game.smgr().getMesh(DEFAULT_MESH.c_str()), game.driver().getTexture(DEFAULT_TEXTURE.c_str()), absVec::from_vector2df(position).toIrr_vector3df(), vector3df(0.0f,0.0f,0.0f), vector3df(1.0f, 1.0f, 1.0f) );
+					//game.addAgent( game.smgr().getMesh(DEFAULT_MESH.c_str()), game.driver().getTexture(DEFAULT_TEXTURE.c_str()), absVec::from_vector2df(position),[>TRANSPOSE_2D_COORDS_DAMMIT(position.X,position.Y),<] vector3df(0.0f,0.0f,0.0f), vector3df(1.0f, 1.0f, 1.0f) );
 				break;
 				}// case
 				// id=remove-agent-button

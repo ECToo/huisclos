@@ -46,7 +46,7 @@ namespace cj
 		using namespace irr;
 		using namespace irr::core;
 
-		//public std::queue<ITickAction, boost::ptr_deque<ITickAction> >
+		//TODO: Is it possible to use an adaptor queue, such as public std::queue<ITickAction, boost::ptr_deque<ITickAction> > ?
 		class ActionSequence : public ITickAction, public boost::ptr_deque<ITickAction>
 		{
 		public:
@@ -59,7 +59,10 @@ namespace cj
 				{
 					const bool finished = front().runTick( frameDelta );
 					if( finished )
-					{	pop_front();	}// if
+					{	
+dpr("Popped.");				
+						pop_front();	
+					}// if
 				}// if
 
 				return( empty() );

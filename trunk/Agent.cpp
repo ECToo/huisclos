@@ -26,13 +26,19 @@ s32 Agent::nextAvailableID = 0;
 	//AgentCtorImpl();
 //}
 
-Agent::Agent(IrrlichtDevice* d, /*PersistentActionsList& pal,*/ stringw mesh, stringw t, stringw h, const absVec& p)
+//Agent::Agent(IrrlichtDevice* d, [>PersistentActionsList& pal,<] stringw mesh, stringw t, stringw h, const absVec& p)
+ //: [>persistentActionsList(pal),<] device(d), path(h), texture(t),
+	//rangefinderVisible(false), radarVisible(false), activationLevelsVisible(false),
+	//feelersOutput(), nearbyAgents(), activationLevels()[>, sensorsAction(*this)<]
+//{
+	//AgentCtorImpl( mesh, p.toIrr_vector3df() );
+//}
+
+Agent::Agent(IrrlichtDevice* d, stringw mesh, stringw t, stringw h, const vector3df& p)
  : /*persistentActionsList(pal),*/ device(d), path(h), texture(t),
-	rangefinderVisible(false), radarVisible(false), activationLevelsVisible(false),
-	feelersOutput(), nearbyAgents(), activationLevels()/*, sensorsAction(*this)*/
-{
-	AgentCtorImpl( mesh, p.toIrr_vector3df() );
-}
+rangefinderVisible(false), radarVisible(false), activationLevelsVisible(false),
+ feelersOutput(), nearbyAgents(), activationLevels(), currentAction(NULL), actionsList()/*, sensorsAction(*this)*/
+{ AgentCtorImpl(mesh, p); }
 
 void Agent::AgentCtorImpl(stringw mesh, const vector3df& p)
 {
@@ -70,29 +76,48 @@ Agent::~Agent()
 	// TODO: This call was segfaulting when the program closes until I stored the agents() vector in a pointer to control the deletion order.  Still looking for a better way.  Base-class fiddling is a nuisance.
 	body->remove();
 	body = NULL;
-}
+}// dtor
+
+
+void Agent::setPosition( const relVec& dest )
+{
+	body->setPosition( dest.toIrr_vector3df() );
+	body->updateAbsolutePosition();
+
+	assert( getPosition() == dest );
+//dpr(dest);
+//dpr(getPosition());
+//dpr(getBody().getAbsolutePosition() );
+	//TODO: assert( getBody().getAbsolutePosition() == dest.to_absVec( *(getBody().getParent()) ).toIrr_vector3df() );
+}// setPosition()
+
+void Agent::setAbsolutePosition( const absVec& dest )
+{	setPosition(dest); }// setAbsolutePosition()
+
+void Agent::setPosition( const absVec& dest )
+{
+	setPosition( dest.to_relVec( *(getBody().getParent()) ) );
+	//body->updateAbsolutePosition();
+
+	assert( getAbsolutePosition() == dest );
+	assert( getBody().getPosition() == dest.to_relVec( *(getBody().getParent()) ).toIrr_vector3df() );
+}// setPosition()
+
+relAngle Agent::getRotation() const { 	return relAngleVec3d::from_vector3df(getBody().getRotation()).to_relAngle();	}// getRotation()
+void Agent::setRotation(const relAngle& rot) { 	getBody().setRotation( rot.to_relAngleVec3d().to_vector3df() ); 	}// setRotation()
 
 // TODO: inline
-void Agent::turn( const relAngle& ang, f32 speed )
-{ 	actionsList.queueAction( new actions::ActAgentTurn(*this, ang, speed) ); }// turn()
+//void Agent::turn( const relAngle& ang, f32 speed )
+//{ 	actionsList.queueAction( new actions::ActAgentTurn(*this, ang, speed) ); }// turn()
 
 // TODO: inline
 // id=move
-actions::ActAgentMove* const Agent::move( const relVec& dest, f32 speed )
-{
-	actions::ActAgentMove* const newact = new actions::ActAgentMove(*this, dest, speed);
-	actionsList.queueAction( newact );
-	return newact;
-}// move()
-
-// id=seek
-actions::ActAgentMove* const Agent::seek( const absVec& dest, f32 speed, f32 turnspeed )
-{
-	actions::ActAgentMove* const newact = move( dest.to_relVec(getBody()), speed );
-	if( turnspeed != 0.0 )
-	{	turn( dest.to_relAngle(getBody()), turnspeed );	}// if
-	return newact;
-}// seek()
+//actions::ActAgentMove* const Agent::move( const relVec& dest, f32 speed )
+//{
+//	actions::ActAgentMove* const newact = new actions::ActAgentMove(*this, dest, speed);
+//	actionsList.queueAction( newact );
+//	return newact;
+//}// move()
 
 vector<f32> Agent::DrawFeelers(bool debug)
 {   //defaults for just one feeler
@@ -176,6 +201,33 @@ inline bool Agent::operator==(const Agent& rhs) const
 inline bool Agent::operator!=(const Agent& rhs) const
 {	return !( this == &rhs ); }// !=()
 
+void Agent::setRangefinder( bool mode, bool vis )
+{
+	setRangefinderVisible(vis);
+	sensor::SSensors::setRangefinder(mode); // chain up
+}// setRangefinder()
+void Agent::setRadar( bool mode, bool vis )
+{
+	setRadarVisible(vis);
+	sensor::SSensors::setRadar(mode); // chain up
+}// setRadar()
+void Agent::setActivation( bool mode, bool vis )
+{
+	setActivationLevelsVisible(vis);
+	sensor::SSensors::setActivation(mode); // chain up
+}// setActivation()
+
+const IAnimatedMeshSceneNode& Agent::getBody(void) const
+{  return *body;  }
+IAnimatedMeshSceneNode& Agent::getBody(void)
+{  return *body;  }
+relVec Agent::getPosition() const
+{	return relVec::from_position( getBody() );	}// getPosition()
+absPos Agent::getAbsolutePosition() const
+{	return absPos::from_vector3df( getBody().getAbsolutePosition() );	}// getAbsolutePosition()
+
+void Agent::turnAtomic( const relAngle& theta ) {	setRotation( getRotation() + theta );	}// turnAtomic()
+
 // id=moveAtomic
 bool Agent::moveAtomic( const relVec& dest )
 {
@@ -232,8 +284,46 @@ bool Agent::moveAtomic( const relVec& dest )
     return moved;
 }
 
+void Agent::setCurrentAction( actions::ITickAction* const newact )
+{
+	if( currentAction != NULL )
+	{	delete currentAction;	}// if
+
+	currentAction = newact;
+}// setCurrentAction()
+
+actions::ActAgentSeekPosition* const Agent::Goto( const vector3df& dest, f32 speed )
+{
+	actions::ActAgentSeekPosition* newact = new actions::ActAgentSeekPosition(*this, dest, speed );
+	assert(newact);
+	setCurrentAction(newact);
+	return newact;
+}// Goto()
+
+actions::ITickAction* const Agent::Seek( const vector3df& dest, f32 speed, const Wall& w, bool debug )
+{
+	return visitWaypoints( const_cast<Wall&>(w).AStar(getBody().getPosition(), dest, debug), speed );
+}// Seek()
+
 //inline void Agent::turnAtomic( const relAngle& theta )
 //{	setRotation( getRotation() + theta );	}// turnAtomic()
+
+void Agent::doTickActions( f32 frameDeltaTime )
+{
+	using namespace actions;
+
+	//for( ActionsList::iterator it = actionsList.begin(); it != actionsList.end(); ++it )
+	//{	it->runTick( frameDeltaTime );	}// for
+	if( currentAction )
+	{
+		const bool bDone = currentAction->runTick(frameDeltaTime);
+		if( bDone )
+		{
+			delete currentAction;
+			currentAction = NULL;
+		}// if
+	}// if
+}// doTickActions
 
 // <TAG> CA - NOTE: Do not add functions to Agent beyond this line.
 // This will be my section.
@@ -305,6 +395,55 @@ bool Agent::MoveVector(vector3df distance)
 
     return moved;
 }
+
+namespace actions
+{
+
+ActAgentSeekPosition::ActAgentSeekPosition( Agent& agt, const vector3df& ds, f32 spd ): agent(agt), dest(ds), speed(spd)
+{}// ctor
+
+ActAgentSeekPosition::~ActAgentSeekPosition() {}
+
+bool ActAgentSeekPosition::runTick( const f32 frameDeltaTime )
+{
+//dpr("ActAgentMove tick");
+	//const absVec dest_conv = absVec::from_vector3df(dest);
+	//const absVec remaining = ( dest_conv - agent.getPosition() );
+	//const absVec remaining = ( dest_conv - agent.getAbsolutePosition() );
+	//vector3df remaining = dest - agent.getBody().getPosition();
+	vector3df remaining = dest - agent.getBody().getAbsolutePosition();
+	f32 dist = frameDeltaTime * speed;
+	if( dist >= remaining.getLength() )
+	{ 	dist = remaining.getLength(); 	}// if
+
+	//relVec distVec(remaining.to_relVec( *(agent.getBody().getParent()) ));
+	//distVec.setLength(dist);
+	//vector3df distVec( remaining.to_relVec( *(agent.getBody().getParent()) ).toIrr_vector3df() );
+	vector3df distVec = (dest - agent.getBody().getPosition());
+	distVec.normalize() *= dist;
+	      //dist.setLength(	frameDeltaTime * speed );
+//dpr("dist " << dist );
+
+	// TODO: Optional:
+	//agent.getDriver().draw3DLine( agent.getPosition().toIrr_vector3df(), dist.to_absVec(*agent.getBody().getParent()).toIrr_vector3df() );
+	//agent.getDriver().draw3DLine( agent.getAbsolutePosition().toIrr_vector3df(), dest_conv.toIrr_vector3df() );
+
+	agent.getBody().setPosition( agent.getBody().getPosition() + distVec );
+	//agent.setPosition( agent.getPosition() + distVec );
+	agent.getBody().updateAbsolutePosition();
+
+	if( agent.getBody().getAbsolutePosition() == dest )
+	//if( agent.getAbsolutePosition() == dest_conv )
+	{
+dpr("Arrived.");
+		//waypoint.setFancyGraphic(false);
+		return true;
+	}// if
+	else
+	{	return false;	}// else
+}// runTick()
+
+}// actions
 
 }// cj
 
