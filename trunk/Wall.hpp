@@ -1,12 +1,11 @@
-#ifndef WALL_H_INCLUDED
-#define WALL_H_INCLUDED
+#ifndef CJ_WALL_HPP
+#define CJ_WALL_HPP
 
-#include <boost/ptr_container/ptr_vector.hpp>
-
+#include <iostream>
 #include <vector>
+#include <list>
+#include <stdexcept>
 #include <irrlicht.h>
-
-namespace cj {
 
 using namespace std;
 using namespace irr;
@@ -15,50 +14,54 @@ using namespace scene;
 using namespace gui;
 using namespace core;
 
-typedef boost::ptr_vector<vector3df> VectorList;
+namespace cj
+{
 
+struct GraphNode
+{
+   vector3df point;
+   GraphNode* connection[8];
+   GraphNode* back;
+   f32 score;
+   f32 count;
+   s32 isWall;
+};
 
+const f32 SQRT2 = sqrt(2);
 
 class Wall
 {
-public:
-	// TODO: Probably should go into Coordinates.hpp
+   public:
+      Wall(IrrlichtDevice* d, stringw t, u32 dsize = 10);
+      ~Wall();
+      void makeWall(u32 length, u32 width, vector3df position); //create a long wall
+      void DrawNodes(void);
+      GraphNode* FindCloseNode(s32 x, s32 z);
+      std::list<vector3df> AStar(vector3df start, vector3df goal, bool debug = false);
+		bool operator== (const Wall& rhs) const;
 
-	static const u32 DEFAULT_CUBE_SIZE;
+   private:
+      void addNode(u32 size, vector3df position); //creates a cube of size and places it at position
+      void ExpandSpace(vector3df a);
+      void InsertPath(s32 x, s32 z);
+      GraphNode* NotWall(vector3df p);
+      void InsertList(std::list<GraphNode*> &glist, GraphNode* node);
+      GraphNode* FindNode(s32 x, s32 z);
 
-	// CTOR
-	// TODO: Split into overloaded methods, so that one doesn't need to construct a new default vector.
-        Wall(IrrlichtDevice* d, stringw t, vector3df localOrigin = vector3df() );
-        ~Wall();
-        void addNode(u32 size, const vector3df& offset); //creates a cube of size and places it at position
-        //void makeWall(u32 length, u32 width, vector3df offset); //create a long wall
-        void makeWall(u32 length, u32 width); //create a long wall
+      vector<IMeshSceneNode*> frame; //contains cubes created by addNode
+      IrrlichtDevice *device; //get driver and smgr from this
+      IVideoDriver* driver; //for drawing
+      ISceneManager* smgr; //needed for adding cubes
+      stringw texture; //path of texture file
+      vector<GraphNode*> paths;
+      s32 xpos;
+      s32 xneg;
+      s32 zpos;
+      s32 zneg;
+      s32 zrange;
+      s32 dsize;
+};
 
-	// Identicality test:
-	bool operator== (const Wall& rhs) const
-	{	return &rhs == this;	}// ==()
+}
 
-	// ACCESSORS.  Note: retval of 0 means that makeWall() has not yet been used.
-	u32 getLength() const { return length;	}//
-	u32 getWidth() const { return width;	}//
-	const vector3df& getPosition() const
-	{	return localOrigin;	}// getPosition()
-
-	// Returns list of points, stored as vectors, giving the absolute positions at which expanded-geometry nodes should be created, relative to its corners.
-	VectorList expandGeometry( const f32 distFromCorner ) const;
-
-    private:
-	typedef std::vector<IMeshSceneNode*> NodeList;// [I called it 'List' instead of 'Vector' just because I've fallen into that convention in other classes.]
-
-	vector3df localOrigin; //initial placement of the 'Wall'; nodes (blocks) added to it are set relative to this position.
-	u32 length;
-	u32 width;
-        NodeList frame; //contains cubes created by addNode
-        IrrlichtDevice *device; //get driver and smgr from this
-        IVideoDriver* driver; //for drawing
-        ISceneManager* smgr; //needed for adding cubes
-        const stringw texture; //path of texture file
-};// Wall
-}// cj
-
-#endif // WALL_H_INCLUDED
+#endif

@@ -56,6 +56,18 @@ namespace cj
 
 	using namespace cj::gui;
 
+	//**************** GAME EXCEPTION
+	class GameException
+	{
+	   public:
+	      GameException(const char *msg);
+	      ~GameException();
+	      const char *Message(void) const;
+
+	   private:
+	      const char *description;
+	};// 
+
 	//************** GAME
 	// id=game
 	// NB: Singleton class; DO NOT TRY TO SUBCLASS!
@@ -324,30 +336,35 @@ dpr( "Resuming (un-breaking?)..." );
 		// TODO: Currently the ID parm is unused.
 		Agent& addAgent(IAnimatedMesh* const mesh,
 			ITexture* const texture,
-			const absVec& position = absVec(),
-			//const irr::core::vector3df& position = irr::core::vector3df(0,0,0),
+			//const absVec& position = absVec(),
+			const irr::core::vector3df& position = irr::core::vector3df(0,0,0),
 			const irr::core::vector3df& rotation = irr::core::vector3df(0,0,0),
 			const irr::core::vector3df& scale = irr::core::vector3df(1.0f, 1.0f, 1.0f),
 			ISceneNode* const parent = 0,
 			const s32 id = -1,
 			bool alsoAddIfMeshPointerZero = false);
 		// Idem, quickie lazy version:
-		Agent& addAgent( const absVec& position = absVec() )
+		Agent& addAgent( const vector3df& position = vector3df() )
 		{
-			// TODO: I guess I should put all that other stuff into static consts as well;
 			return addAgent( smgr().getMesh(DEFAULT_MESH.c_str()), driver().getTexture(DEFAULT_TEXTURE.c_str()), position, vector3df(0.0f,0.0f,0.0f), vector3df(1.0f, 1.0f, 1.0f) );
 		}// addAgent()
+		//Agent& addAgent( const absVec& position = absVec() )
+		//{
+			//// TODO: I guess I should put all that other stuff into static consts as well;
+			//return addAgent( smgr().getMesh(DEFAULT_MESH.c_str()), driver().getTexture(DEFAULT_TEXTURE.c_str()), position, vector3df(0.0f,0.0f,0.0f), vector3df(1.0f, 1.0f, 1.0f) );
+		//}// addAgent()
 
 		// Removes & deallocates an Agent in O(n).  Do NOT reference an Agent not inscene!
 		void removeAgent( Agent& agent );
 		// Idem, but removes the "it'th" Agent.
 		void removeAgent( const AgentsList::iterator& it );
 
+		Wall& addWall();
 		//// Create a default wall : 1×1 block @ origin, or to taste.
-		Wall& addWall( u32 length = 1, u32 width = 1, const absVec& position = absVec() );
+		//Wall& addWall( u32 length = 1, u32 width = 1, const absVec& position = absVec() );
 		//// Idem: Default wall size, but you want to provide a position.
-		inline Wall& addWall( const absVec& position )
-		{	return addWall(1, 1, position);	}// addWall()
+		//inline Wall& addWall( const absVec& position )
+		//{	return addWall(1, 1, position);	}// addWall()
 
 
 		void removeWall( Wall& wall );
@@ -360,6 +377,17 @@ dpr( "Resuming (un-breaking?)..." );
 
 		void setGUIVisible( bool b = true )
 		{	gui().setVisible(b);	}// setGUIVisible()
+
+		const NavGraph& getNavGraph() const 
+		{ 
+			assert( navgraph );
+			return *navgraph;
+		}// getNavGraph()
+		NavGraph& getNavGraph()
+		{ 
+			assert( navgraph );
+			return *navgraph;
+		}// getNavGraph()
 
 		//*** MAIN LOOP:
 		// id=start

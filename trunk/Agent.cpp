@@ -10,9 +10,14 @@ const f32 Agent::TURN_FAST = 180.0f;
 
 const f32 Agent::DEFAULT_GIRTH = 15.0; // FIXME: This was arbitrarily chosen.
 
+s32 Agent::genID()
+{
+	assert( nextAvailableID >= 0 );
+	return nextAvailableID ++ ;
+}// genID()
+
 // Counter for generating the next free ID#:
 s32 Agent::nextAvailableID = 0;
-
 
 // id=ctor ⁅This is a search marker for me in Vim⁆
 //Agent::Agent(IrrlichtDevice* d, [>PersistentActionsList& pal,<] stringw mesh, stringw t, stringw h, const vector3df& p)
