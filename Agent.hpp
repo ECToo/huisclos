@@ -16,9 +16,7 @@ namespace cj
 	using namespace irr::core;
 	using namespace irr::scene;
 	using namespace irr::video;
-#ifndef SWIG
 	using std::vector;
-#endif
 
 struct pointOfInterest
 {   //Simplified struct for now, class later
@@ -43,26 +41,9 @@ struct pointOfInterest
 
 		typedef vector<pointOfInterest> ContactsList;
 
-		//enum Direction
-		//{
-			//UP,
-			//DOWN,
-			//RIGHT_ABS,
-			//LEFT_ABS,
-			//FORWARD,
-			//BACKWARD,
-			//RIGHT_REL,
-			//LEFT_REL
-		//};//
-
-
 		// STATIC ACCESSORS
-		static s32 nextAvailableID ;
-		static s32 genID()
-		{
-			assert( nextAvailableID >= 0 );
-			return nextAvailableID ++ ;
-		}// genID()
+		static s32 nextAvailableID;
+		static s32 genID(); // Returns the next unused Agent ID int.
 
 		// TODO: setMaterialFlag( /* handoff */ );
 		// TODO: setMD2Animation( /* handoff */ );
@@ -177,7 +158,6 @@ struct pointOfInterest
 		void setActivationLevelsVisible( bool vis=true )
 		{	activationLevelsVisible = vis;	}//
 
-		// Odd--but these seem to need to be exported explicitly to be visible in e.g. the Actions' runTick() methods.
 		using sensor::SSensors::setRangefinder;
 		using sensor::SSensors::setRadar;
 		using sensor::SSensors::setActivation;
@@ -200,20 +180,11 @@ struct pointOfInterest
 
 		// Sensor output:
 		const vector<f32>& getRangefinderOutput() const
-		{
-			assert( getRangefinder() );
-			return feelersOutput;
-		}//
+		{ assert( getRangefinder() ); return feelersOutput; }//
 		const ContactsList& getRadarOutput() const
-		{
-			assert( getRadar() );
-			return nearbyAgents;
-		}//
+		{ assert( getRadar() ); return nearbyAgents; }//
 		const vector<f32>& getActivationOutput() const
-		{
-			assert( getActivation() );
-			return activationLevels;
-		}//
+		{ assert( getActivation() ); return activationLevels; }//
 
 		// OPERATORS
 		virtual bool operator== (const Agent& rhs) const;
@@ -229,6 +200,9 @@ struct pointOfInterest
 
 		// (used by ActAgentMove::runTick() for debug-line drawing.  TODO: Perh. make this a property of the Action itself?)
 		IVideoDriver& getDriver() {	return *driver;	}// getDriver()
+
+		//actions::ActAtkMelee* AttackMelee( Agent& target );
+		//ActAtkRanged* AttackRanged( Agent& target );
 
 		// <TAG> CA - NOTE: Do not add public functions to Agent beyond this line.
 		// This will be my section.

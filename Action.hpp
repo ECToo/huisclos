@@ -4,6 +4,7 @@
 #include <irrlicht.h>
 #include <list>
 #include "boost/ptr_container/ptr_list.hpp"
+#include "boost/ptr_container/ptr_deque.hpp"
 
 #ifndef NDEBUG
 #include "IO.hpp"
@@ -20,7 +21,7 @@ namespace cj
 		//using namespace std;
 
 		// ABC:
-		class ITickAction : public boost::noncopyable 
+		class ITickAction : public boost::noncopyable
 		{
 		public:
 			//ITickAction();
@@ -44,6 +45,28 @@ namespace cj
 
 		using namespace irr;
 		using namespace irr::core;
+
+		//public std::queue<ITickAction, boost::ptr_deque<ITickAction> >
+		class ActionSequence : public ITickAction, public boost::ptr_deque<ITickAction>
+		{
+		public:
+			virtual ~ActionSequence() {}
+			virtual bool operator==(const ActionSequence& rhs) const {	return this==&rhs;	}
+
+			virtual bool runTick( f32 frameDelta )
+			{
+				if( !empty() )
+				{
+					const bool finished = front().runTick( frameDelta );
+					if( finished )
+					{	pop_front();	}// if
+				}// if
+
+				return( empty() );
+			}// runTick()
+		};// ActionSequence
+
+
 
 		//class ActionsList : public boost::noncopyable, private boost::ptr_list<ITickAction>
 		//{
@@ -115,7 +138,7 @@ namespace cj
 					const bool finished = it->runTick( frameDeltaTime );
 					if( finished )
 					{
-						// FIXME: 
+						// FIXME:
 						// If the action is intended to "chain," load the next action.
 						//if( it->getNextAction() != NULL )
 						//{

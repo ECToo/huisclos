@@ -25,10 +25,13 @@ int main()
 	game.setGUIVisible(false);
 
 
-	game.addWall( 2, 10, cj::absVec(40,25) );
-	game.addWall( 10, 2, cj::absVec(0,-100) );
+	Wall wall = game.addWall();
+   wall.makeWall(1,20,vector3df(0,0,20));
+   wall.makeWall(1,20,vector3df(70,0,50));
+   wall.makeWall(10,1,vector3df(0,0,-20));
+   wall.makeWall(1,20,vector3df(-75,0,50));
 
-	Agent& faerie = game.addAgent();// default version
+	Agent& faerie = game.addAgent( vector3df(0,0,90) );
 	game.setPC( faerie );
 
 	//game.setViewMode( Game::FIRST_PERSON );
