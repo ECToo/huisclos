@@ -20,25 +20,20 @@ s32 Agent::genID()
 s32 Agent::nextAvailableID = 0;
 
 // id=ctor ⁅This is a search marker for me in Vim⁆
-//Agent::Agent(IrrlichtDevice* d, [>PersistentActionsList& pal,<] stringw mesh, stringw t, stringw h, const vector3df& p)
- //: [>persistentActionsList(pal),*/ device(d), path(h), texture(t), feelersOutput(), nearbyAgents(), activationLevels()/*, sensorsAction(*this)<]
-//{
-	//AgentCtorImpl();
-//}
-
-//Agent::Agent(IrrlichtDevice* d, [>PersistentActionsList& pal,<] stringw mesh, stringw t, stringw h, const absVec& p)
- //: [>persistentActionsList(pal),<] device(d), path(h), texture(t),
-	//rangefinderVisible(false), radarVisible(false), activationLevelsVisible(false),
-	//feelersOutput(), nearbyAgents(), activationLevels()[>, sensorsAction(*this)<]
-//{
-	//AgentCtorImpl( mesh, p.toIrr_vector3df() );
-//}
-
-Agent::Agent(IrrlichtDevice* d, stringw mesh, stringw t, stringw h, const vector3df& p)
- : /*persistentActionsList(pal),*/ device(d), path(h), texture(t),
-rangefinderVisible(false), radarVisible(false), activationLevelsVisible(false),
- feelersOutput(), nearbyAgents(), activationLevels(), currentAction(NULL), actionsList()/*, sensorsAction(*this)*/
-{ AgentCtorImpl(mesh, p); }
+Agent::Agent(IrrlichtDevice* d, stringw mesh, stringw t, stringw h, const vector3df& p):
+	device(d),
+	path(h),
+	texture(t),
+	rangefinderVisible(false),
+	radarVisible(false),
+	activationLevelsVisible(false),
+ 	feelersOutput(),
+	nearbyAgents(),
+	activationLevels(),
+	currentAction(NULL),
+	actionsList(),
+	currentState( Agent::MOVE )
+{ AgentCtorImpl(mesh, p); }// ctor
 
 void Agent::AgentCtorImpl(stringw mesh, const vector3df& p)
 {
@@ -226,6 +221,12 @@ relVec Agent::getPosition() const
 absPos Agent::getAbsolutePosition() const
 {	return absPos::from_vector3df( getBody().getAbsolutePosition() );	}// getAbsolutePosition()
 
+Agent::AgentState Agent::getState() const
+{	return currentState;	}// getState()
+
+void Agent::setState( Agent::AgentState& s )
+{	currentState = s;	}// setState()
+
 void Agent::turnAtomic( const relAngle& theta ) {	setRotation( getRotation() + theta );	}// turnAtomic()
 
 // id=moveAtomic
@@ -407,33 +408,22 @@ ActAgentSeekPosition::~ActAgentSeekPosition() {}
 bool ActAgentSeekPosition::runTick( const f32 frameDeltaTime )
 {
 //dpr("ActAgentMove tick");
-	//const absVec dest_conv = absVec::from_vector3df(dest);
-	//const absVec remaining = ( dest_conv - agent.getPosition() );
-	//const absVec remaining = ( dest_conv - agent.getAbsolutePosition() );
-	//vector3df remaining = dest - agent.getBody().getPosition();
 	vector3df remaining = dest - agent.getBody().getAbsolutePosition();
 	f32 dist = frameDeltaTime * speed;
 	if( dist >= remaining.getLength() )
 	{ 	dist = remaining.getLength(); 	}// if
 
-	//relVec distVec(remaining.to_relVec( *(agent.getBody().getParent()) ));
-	//distVec.setLength(dist);
-	//vector3df distVec( remaining.to_relVec( *(agent.getBody().getParent()) ).toIrr_vector3df() );
 	vector3df distVec = (dest - agent.getBody().getPosition());
 	distVec.normalize() *= dist;
-	      //dist.setLength(	frameDeltaTime * speed );
 //dpr("dist " << dist );
 
 	// TODO: Optional:
 	//agent.getDriver().draw3DLine( agent.getPosition().toIrr_vector3df(), dist.to_absVec(*agent.getBody().getParent()).toIrr_vector3df() );
-	//agent.getDriver().draw3DLine( agent.getAbsolutePosition().toIrr_vector3df(), dest_conv.toIrr_vector3df() );
 
 	agent.getBody().setPosition( agent.getBody().getPosition() + distVec );
-	//agent.setPosition( agent.getPosition() + distVec );
 	agent.getBody().updateAbsolutePosition();
 
 	if( agent.getBody().getAbsolutePosition() == dest )
-	//if( agent.getAbsolutePosition() == dest_conv )
 	{
 dpr("Arrived.");
 		//waypoint.setFancyGraphic(false);
