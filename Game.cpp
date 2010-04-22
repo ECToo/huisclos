@@ -38,6 +38,11 @@ Game* Game::irrInstance = NULL;
 bool Game::hasBeenRun = false;
 const recti Game::HUDBB(20, 20, 200, 100);// Coordinates for the HUD, the upper-left-corner
 
+//std::list<vector3df> Game::AStar( const vector3df& start, const vector3df& dest, bool debug=true )
+//{
+//	return walls().first().AStar(start, dest, debug);
+//}// AStar()
+
 // id=ctor
 // Note: Parms pinched from /usr/local/include/irrlicht.h .
 // Note: Inlined b/c will only be called once.
@@ -648,7 +653,10 @@ void Game::doTickKeyboardIO()
 void Game::doTickAgentsActions()
 {
 	for( AgentsList::iterator it = agents().begin(); it != agents().end(); ++it )
-	{	it->doTickActions(static_cast<f32>(curTick - prevTick) / 1000.f);	}// for
+	{	
+		if( !getIsPCSet() || (getPC() != *it) )
+		{	it->doTickActions(static_cast<f32>(curTick - prevTick) / 1000.f);	}// if
+	}// for
 }// doTickAgentsActions()
 
 //// Handoff to GUI.

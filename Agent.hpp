@@ -1,22 +1,23 @@
 #ifndef __AGENT__
 #define __AGENT__
 
-#include <cassert>
+#include "assert_swig.hpp"
 #include <irrlicht.h>
 #include <vector>
 #include "boost/utility.hpp" // boost::noncopyable
 
+#include "Wall.hpp"
 #include "Sensor.hpp"
 #include "Action.hpp"
 #include "Coordinates.hpp"
 
 namespace cj
 {
-	using namespace irr;
-	using namespace irr::core;
-	using namespace irr::scene;
-	using namespace irr::video;
-	using std::vector;
+using namespace irr;
+using namespace irr::core;
+using namespace irr::scene;
+using namespace irr::video;
+using std::vector;
 
 struct pointOfInterest
 {   //Simplified struct for now, class later
@@ -25,306 +26,262 @@ struct pointOfInterest
     IAnimatedMeshSceneNode* object;
 };
 
-	// fwd dec
-	namespace actions { class ActAgentTurn; class ActAgentMove; }//
+// fwd dec
+namespace actions { class ActAgentSeekPosition; class ActAgentTurn; class ActAgentMove; }//
 
-	// TODO: Change private to protected once subclass interface has been considered properly.
-	class Agent : public boost::noncopyable, public sensor::SSensors
-	{
-	public:
-		static const f32 DEFAULT_GIRTH;
+// TODO: Change private to protected once subclass interface has been considered properly.
+class Agent : public boost::noncopyable, public sensor::SSensors
+{
+public:
+	static const f32 DEFAULT_GIRTH;
+	static const f32 MOVEMENT_SLOW;
+	static const f32 MOVEMENT_FAST;
+	static const f32 TURN_SLOW;
+	static const f32 TURN_FAST;
 
-		static const f32 MOVEMENT_SLOW;
-		static const f32 MOVEMENT_FAST;
-		static const f32 TURN_SLOW;
-		static const f32 TURN_FAST;
+	typedef vector<pointOfInterest> ContactsList;
 
-		typedef vector<pointOfInterest> ContactsList;
+	static s32 nextAvailableID;
+	static s32 genID(); // Returns the next unused Agent ID int.
 
-		// STATIC ACCESSORS
-		static s32 nextAvailableID;
-		static s32 genID(); // Returns the next unused Agent ID int.
+	// id=Ctor
+	//Agent(IrrlichtDevice* d, [>PersistentActionsList& pal,<] stringw mesh, stringw t, stringw h, const absVec& p);
+	Agent(IrrlichtDevice* d, /*PersistentActionsList& pal,*/ stringw mesh, stringw t, stringw h, const vector3df& p);
+	// id=DTOR
+	virtual ~Agent();
 
-		// TODO: setMaterialFlag( /* handoff */ );
-		// TODO: setMD2Animation( /* handoff */ );
+	// Wrapper for ISceneNode#setPosition(); relative coords.
+	void setPosition( const relVec& dest );
+	// Wrapper for ISceneNode#setAbsolutePosition().
+	void setAbsolutePosition( const absVec& dest );
+	// Idem; for convenience.
+	void setPosition( const absVec& dest );
 
-		// id=Ctor
-		// Main ctor:
-		Agent(IrrlichtDevice* d, /*PersistentActionsList& pal,*/ stringw mesh, stringw t, stringw h, const absVec& p);
-		// Legacy ctor:
-		Agent(IrrlichtDevice* d, /*PersistentActionsList& pal,*/ stringw mesh, stringw t, stringw h, const vector3df& p)
-		 : /*persistentActionsList(pal),*/ device(d), path(h), texture(t),
-		rangefinderVisible(false), radarVisible(false), activationLevelsVisible(false),
-		 feelersOutput(), nearbyAgents(), activationLevels(), actionsList()/*, sensorsAction(*this)*/
-		{ AgentCtorImpl(mesh, p); }
+	//const ActionsList& getActionsList() const
+	//{	return actionsList;	}//
+	//ActionsList& getActionsList()
+	//{	return actionsList;	}//
 
-		 //: [>persistentActionsList(pal),*/ device(d), path(h), texture(t), feelersOutput(), nearbyAgents(), activationLevels()/*, sensorsAction(*this)<]
-		//{
-			//AgentCtorImpl();
-		//}
+	relAngle getRotation() const;
+	void setRotation(const relAngle& rot);
+	// TODO: with absAngleVector3d:
+	//absAngle getAbsoluteRotation() const
+	//{ 	return absAngle::from_rotation3df(getBody().getAbsoluteTransformation().getRotation());	}// getAbsoluteRotation()
+	//void setAbsoluteRotation(const absAngle& rot) const
+	//{ 	setRotation( rot.to_relAngle( getBody().getParent() ) );	}// setAbsoluteRotation()
 
-		// id=DTOR
-		virtual ~Agent();
+	// Turn by a specified amount.
+	void turnAtomic( const relAngle& theta );
+	bool moveAtomic( const relVec& dest );
 
-		// Wrapper for ISceneNode#setPosition(); relative coords.
-		void setPosition( const relVec& dest )
-		{
-			body->setPosition( dest.toIrr_vector3df() );
-			//body->updateAbsolutePosition();
+	// ACTIONS:
+	actions::ActAgentSeekPosition* const Goto( const vector3df& dest, f32 speed );
+	// Turn by specified number of degrees at specified rate, degrees per second.
+	//void turn( const relAngle& ang, f32 speed[>FIXME: , IActionLoader* const nextAction = NULL <]);
+	// id=move
+	//actions::ActAgentMove* const move( const relVec& dest, f32 speed[> FIXME: , IActionLoader* const nextAction = NULL <]);
+	// TODO: Small optimization by breaking into two overloaded funcs i/s/o one w/ a default parm:
+	// id=seek
+	//template <typename TAStar> actions::ITickAction* const Seek( const vector3df& dest, f32 speed, const TAStar& callback, bool debug=true );
+	actions::ITickAction* const Seek( const vector3df& dest, f32 speed, const cj::Wall& w, bool debug=true );
+	//actions::ActAgentMove* const seek( const absVec& dest, f32 speed, f32 turnspeed = 0.0[> FIXME: , IActionLoader* const nextAction = NULL<] );
+	template <typename TWaypointsList> actions::ActionSequence* visitWaypoints( const TWaypointsList& pointsList, f32 speed );
 
-			assert( getPosition() == dest );
-			assert( getBody().getAbsolutePosition() == dest.to_absVec( *(getBody().getParent()) ) );
-		}// setPosition()
-		// Wrapper for ISceneNode#setAbsolutePosition().
-		void setAbsolutePosition( const absVec& dest )
-		{	setPosition(dest); }// setAbsolutePosition()
-		// Idem; for convenience.
-		void setPosition( const absVec& dest )
-		{
-			setPosition( dest.to_relVec( *(getBody().getParent()) ) );
-			//body->updateAbsolutePosition();
+	vector<f32> DrawFeelers(bool debug = false);  //wall collision detection
+	// TODO: Even better: make these func templates taking const_iterators.)
+	template <typename TAgentsIterator> ContactsList DrawCircle(TAgentsIterator begin, const TAgentsIterator& end, bool debug = false);  //shows circular range and agents in range
+	template <typename TAgentsIterator> void ClearCircle(TAgentsIterator begin, const TAgentsIterator& end);
+	template <typename TAgentsIterator> vector<f32> DrawPieSlices(TAgentsIterator begin, const TAgentsIterator& end, bool debug = false);  //activation sectors
+	void SetResolution(u32 r);  //change resolution
+	void SetRange(u32 r);  //change range
+	void SetAwareness(u32 a);  //change awareness
 
-			assert( getAbsolutePosition() == dest );
-			assert( getBody().getPosition() == dest.to_relVec( *(getBody().getParent()) ).toIrr_vector3df() );
-		}// setPosition()
+	// ACCESSORS
+	const IAnimatedMeshSceneNode& getBody(void) const;
+	IAnimatedMeshSceneNode& getBody(void);
+	relVec getPosition() const;
+	absPos getAbsolutePosition() const;
 
-		//const ActionsList& getActionsList() const
-		//{	return actionsList;	}//
-		//ActionsList& getActionsList()
-		//{	return actionsList;	}//
+	bool getRangefinderVisible() const {	return rangefinderVisible;	}//
+	bool getRadarVisible() const {	return radarVisible;	}//
+	bool getActivationLevelsVisible() const {	return activationLevelsVisible;	}//
 
-		relAngle getRotation() const
-		{ 	return relAngleVec3d::from_vector3df(getBody().getRotation()).to_relAngle();	}// getRotation()
-		void setRotation(const relAngle& rot)
-		{ 	getBody().setRotation( rot.to_relAngleVec3d().to_vector3df() ); 	}// setRotation()
-		// TODO: with absAngleVector3d:
-		//absAngle getAbsoluteRotation() const
-		//{ 	return absAngle::from_rotation3df(getBody().getAbsoluteTransformation().getRotation());	}// getAbsoluteRotation()
-		//void setAbsoluteRotation(const absAngle& rot) const
-		//{ 	setRotation( rot.to_relAngle( getBody().getParent() ) );	}// setAbsoluteRotation()
+	void setRangefinderVisible( bool vis=true ) {	rangefinderVisible = vis;	}//
+	void setRadarVisible( bool vis=true ) {	radarVisible = vis;	}//
+	void setActivationLevelsVisible( bool vis=true ) {	activationLevelsVisible = vis;	}//
 
-		// Turn by a specified amount.
-		void turnAtomic( const relAngle& theta )
-		{	setRotation( getRotation() + theta );	}// turnAtomic()
-		bool moveAtomic( const relVec& dest );
+	using sensor::SSensors::setRangefinder;
+	using sensor::SSensors::setRadar;
+	using sensor::SSensors::setActivation;
+	// Idem, but setting visibility simultaneously:
+	virtual void setRangefinder( bool mode, bool vis );
+	virtual void setRadar( bool mode, bool vis );
+	virtual void setActivation( bool mode, bool vis );
 
-		// ACTIONS:
-		// Turn by specified number of degrees at specified rate, degrees per second.
-		void turn( const relAngle& ang, f32 speed/*FIXME: , IActionLoader* const nextAction = NULL */);
-		// id=move
-		actions::ActAgentMove* const move( const relVec& dest, f32 speed/* FIXME: , IActionLoader* const nextAction = NULL */);
-		// TODO: Small optimization by breaking into two overloaded funcs i/s/o one w/ a default parm:
-		// id=seek
-		actions::ActAgentMove* const seek( const absVec& dest, f32 speed, f32 turnspeed = 0.0/* FIXME: , IActionLoader* const nextAction = NULL*/ );
+	// Sensor output:
+	const vector<f32>& getRangefinderOutput() const { assert( getRangefinder() ); return feelersOutput; }//
+	const ContactsList& getRadarOutput() const { assert( getRadar() ); return nearbyAgents; }//
+	const vector<f32>& getActivationOutput() const { assert( getActivation() ); return activationLevels; }//
 
-		//actions::ActAgentSeekWaypoint[>FIXME: <] *
-					     //seekWaypoint( Waypoint& pt, f32 speed, f32 turnspeed = 0.0, IActionLoader* const nextAction = NULL );
-					     //// FIXME: {	return
+	// id=op
+	virtual bool operator== (const Agent& rhs) const;
+	virtual bool operator!= (const Agent& rhs) const;
 
-		vector<f32> DrawFeelers(bool debug = false);  //wall collision detection
-		// TODO: Even better: make these func templates taking const_iterators.)
-		template <typename TAgentsIterator> ContactsList DrawCircle(TAgentsIterator begin, const TAgentsIterator& end, bool debug = false);  //shows circular range and agents in range
-		template <typename TAgentsIterator> void ClearCircle(TAgentsIterator begin, const TAgentsIterator& end);
-        	template <typename TAgentsIterator> vector<f32> DrawPieSlices(TAgentsIterator begin, const TAgentsIterator& end, bool debug = false);  //activation sectors
-		void SetResolution(u32 r);  //change resolution
-		void SetRange(u32 r);  //change range
-		void SetAwareness(u32 a);  //change awareness
+	// Called by Game; not for end-user.  Unfortunately, two of the sensor types require iteration, and the list will be traversed twice.  Coroutines would solve the problem.
+	template <typename TAgentsIterator> void updateSensors(const TAgentsIterator& begin, const TAgentsIterator& end);
 
-		// ACCESSORS
-		const IAnimatedMeshSceneNode& getBody(void) const
-		{  return *body;  }
-		IAnimatedMeshSceneNode& getBody(void)
-		{  return *body;  }
+	void doTickActions( f32 frameDeltaTime );
 
-		relVec getPosition() const
-		{	return relVec::from_position( getBody() );	}// getPosition()
-		absPos getAbsolutePosition() const
-		{	return absPos::from_vector3df( getBody().getAbsolutePosition() );	}// getAbsolutePosition()
+	// (used by ActAgentMove::runTick() for debug-line drawing.  TODO: Perh. make this a property of the Action itself?)
+	IVideoDriver& getDriver() {	return *driver;	}// getDriver()
 
-		//absVec getAbsolutePosition() const
-		//{	return absVec::from_position( getBody() );	}// getAbsolutePosition()
+	//actions::ActAtkMelee* AttackMelee( Agent& target );
+	//ActAtkRanged* AttackRanged( Agent& target );
 
-		bool getRangefinderVisible() const
-		{	return rangefinderVisible;	}//
-		bool getRadarVisible() const
-		{	return radarVisible;	}//
-		bool getActivationLevelsVisible() const
-		{	return activationLevelsVisible;	}//
+	// <TAG> CA - NOTE: Do not add public functions to Agent beyond this line.
+	// This will be my section.
+	bool MoveVector(vector3df distance);  //COLLISON MOVEMENT
 
-		void setRangefinderVisible( bool vis=true )
-		{	rangefinderVisible = vis;	}//
-		void setRadarVisible( bool vis=true )
-		{	radarVisible = vis;	}//
-		void setActivationLevelsVisible( bool vis=true )
-		{	activationLevelsVisible = vis;	}//
+// id=private
+private:
+	IrrlichtDevice *device; //get driver and smgr from this
+	IVideoDriver* driver; //for drawing
+	ISceneManager* smgr; //needed for adding cubes
+	ISceneCollisionManager* cmgr; //for collision detection
+	IAnimatedMeshSceneNode* body;  //scene node
+	IBillboardSceneNode * circle;  //node for circle
+	u32 awareness;  //view range
+	u32 resolution;  //density of sensors
+	u32 range;  //range of sensors
+	stringw path;  //directory of textures
+	stringw texture;  //path+file of the body's texture
 
-		using sensor::SSensors::setRangefinder;
-		using sensor::SSensors::setRadar;
-		using sensor::SSensors::setActivation;
-		// Idem, but setting visibility simultaneously:
-		virtual void setRangefinder( bool mode, bool vis )
-		{
-			setRangefinderVisible(vis);
-			sensor::SSensors::setRangefinder(mode); // chain up
-		}// setRangefinder()
-		virtual void setRadar( bool mode, bool vis )
-		{
-			setRadarVisible(vis);
-			sensor::SSensors::setRadar(mode); // chain up
-		}// setRadar()
-		virtual void setActivation( bool mode, bool vis )
-		{
-			setActivationLevelsVisible(vis);
-			sensor::SSensors::setActivation(mode); // chain up
-		}// setActivation()
+	// These control whether the debug visuals are used:
+	bool rangefinderVisible;
+	bool radarVisible;
+	bool activationLevelsVisible;
 
-		// Sensor output:
-		const vector<f32>& getRangefinderOutput() const
-		{ assert( getRangefinder() ); return feelersOutput; }//
-		const ContactsList& getRadarOutput() const
-		{ assert( getRadar() ); return nearbyAgents; }//
-		const vector<f32>& getActivationOutput() const
-		{ assert( getActivation() ); return activationLevels; }//
+	// These eclectically-named lists hold the output from the sensors, as recorded during the most recent tick.  Use the get*Output() accessors, above, instead.
+	vector<f32> feelersOutput;
+	ContactsList nearbyAgents;
+	vector<f32> activationLevels;
 
-		// OPERATORS
-		virtual bool operator== (const Agent& rhs) const;
-		virtual bool operator!= (const Agent& rhs) const;
+	actions::ITickAction* currentAction;
+	actions::ActionsList actionsList;
 
-		// Called by Game; not for end-user.  Unfortunately, two of the sensor types require iteration, and the list will be traversed twice.  Coroutines would solve the problem.
-		template <typename TAgentsIterator> void updateSensors(const TAgentsIterator& begin, const TAgentsIterator& end);
-		void doTickActions( f32 frameDeltaTime )
-		{
-			for( cj::actions::ActionsList::iterator it = actionsList.begin(); it != actionsList.end(); ++it )
-			{	it->runTick( frameDeltaTime );	}// for
-		}// doTickActions
+	// Ctor body utility function:
+	void AgentCtorImpl(stringw mesh, const vector3df& p);
 
-		// (used by ActAgentMove::runTick() for debug-line drawing.  TODO: Perh. make this a property of the Action itself?)
-		IVideoDriver& getDriver() {	return *driver;	}// getDriver()
+	void setCurrentAction( actions::ITickAction* const newact );
 
-		//actions::ActAtkMelee* AttackMelee( Agent& target );
-		//ActAtkRanged* AttackRanged( Agent& target );
-
-		// <TAG> CA - NOTE: Do not add public functions to Agent beyond this line.
-		// This will be my section.
-		bool MoveVector(vector3df distance);  //COLLISON MOVEMENT
-
-	// id=private
-	private:
-		IrrlichtDevice *device; //get driver and smgr from this
-		IVideoDriver* driver; //for drawing
-		ISceneManager* smgr; //needed for adding cubes
-		ISceneCollisionManager* cmgr; //for collision detection
-		IAnimatedMeshSceneNode* body;  //scene node
-		IBillboardSceneNode * circle;  //node for circle
-		u32 awareness;  //view range
-		u32 resolution;  //density of sensors
-		u32 range;  //range of sensors
-		stringw path;  //directory of textures
-		stringw texture;  //path+file of the body's texture
-
-		// These control whether the debug visuals are used:
-		bool rangefinderVisible;
-		bool radarVisible;
-		bool activationLevelsVisible;
-
-		// These eclectically-named lists hold the output from the sensors, as recorded during the most recent tick.  Use the get*Output() accessors, above, instead.
-		vector<f32> feelersOutput;
-		ContactsList nearbyAgents;
-		vector<f32> activationLevels;
-
-		cj::actions::ActionsList actionsList;
-
-		// Ctor body utility function:
-		void AgentCtorImpl(stringw mesh, const vector3df& p);
-
-		// Setters for sensor data.
-		void setRangefinderOutput(const vector<f32>& vec ) { feelersOutput = vec;	}//
-		void setRadarOutput( const ContactsList& vec ) { nearbyAgents = vec;	}//
-		void setActivationOutput( const vector<f32>& vec ) { activationLevels = vec;	}//
-	};// Agent
+	// Setters for sensor data.
+	void setRangefinderOutput(const vector<f32>& vec ) { feelersOutput = vec;	}//
+	void setRadarOutput( const ContactsList& vec ) { nearbyAgents = vec;	}//
+	void setActivationOutput( const vector<f32>& vec ) { activationLevels = vec;	}//
+};// Agent
 
 // id=act, id=actions
 namespace actions
 {
-	// id=act-agent-turn
-	class ActAgentTurn : public ITickAction
+// id=act-agent-turn
+class ActAgentTurn : public ITickAction
+{
+public:
+	// CTOR
+	ActAgentTurn( Agent& agt, const relAngle& angle, f32 spd ): agent(agt), totalAngle(angle), speed(spd) {}
+
+	// DTOR
+	virtual ~ActAgentTurn() {}
+
+	bool runTick( const f32 frameDeltaTime )
 	{
-	public:
-		// CTOR
-		ActAgentTurn( Agent& agt, const relAngle& angle, f32 spd ): agent(agt), totalAngle(angle), speed(spd) {}
+		relAngle angle( frameDeltaTime * speed );
 
-		// DTOR
-		virtual ~ActAgentTurn() {}
+		if( angle > totalAngle )
+		{	angle = totalAngle;	}// if
 
-		bool runTick( const f32 frameDeltaTime )
-		{
-			relAngle angle( frameDeltaTime * speed );
+		agent.turnAtomic( angle );
+		totalAngle -= angle;
+		return totalAngle.iszero(); // indicates completion
+		//if( angle.iszero() )
+		//{
+			//agt.getActionsList().erase(*this);
+		//}// if
+	}// runTick()
+private:
+	Agent& agent;
+	relAngle totalAngle;
+	const f32 speed;
+};// ActAgentTurn
 
-			if( angle > totalAngle )
-			{	angle = totalAngle;	}// if
-
-			agent.turnAtomic( angle );
-			totalAngle -= angle;
-			return totalAngle.iszero(); // indicates completion
-			//if( angle.iszero() )
-			//{
-				//agt.getActionsList().erase(*this);
-			//}// if
-		}// runTick()
-	private:
-		Agent& agent;
-		relAngle totalAngle;
-		const f32 speed;
-	};// ActAgentTurn
-
-	// id=act-agent-move
-	class ActAgentMove : public ITickAction
+// id=act-agent-move
+class ActAgentMove : public ITickAction
+{
+public:
+	// CTOR
+	ActAgentMove( Agent& agt, const relVec& dist, f32 spd ): agent(agt), totalDist(dist), speed(spd), rangefinderPrevState(agt.getRangefinder())
 	{
-	public:
-		// CTOR
-		ActAgentMove( Agent& agt, const relVec& dist, f32 spd ): agent(agt), totalDist(dist), speed(spd), rangefinderPrevState(agt.getRangefinder())
+		// We need the rangefinder on, so, if it isn't, make a memo of the state and then enable it temporarily.
+		if( !rangefinderPrevState )
+		{	agt.setRangefinder(true, false);	}// if
+	}// ctor
+
+	// DTOR
+	virtual ~ActAgentMove() {}
+
+	bool runTick( const f32 frameDeltaTime )
+	{
+		relVec dist( frameDeltaTime * speed );
+
+		// If we'd be going to far, scale back
+		if( dist.getLengthSQ() > totalDist.getLengthSQ() )
+		{	dist = totalDist;	}// if
+
+		// TODO: Optional:
+		//agent.getDriver().draw3DLine( agent.getAbsolutePosition().toIrr_vector3df(), dist.to_absVec(agent.getBody()).toIrr_vector3df() );
+
+		// Do we avoid hitting a wall on the way?
+		bool success = agent.moveAtomic( dist );
+		if( success )
+		{	totalDist -= dist;	}// if
+
+		assert( relVec() == relVec(0.0,0.0) );// TODO: delete.
+
+		if ( !success || (totalDist == relVec()) ) // i.e., we ran into a wall and had to stop OR we've completed the movement.
 		{
-			// We need the rangefinder on, so, if it isn't, make a memo of the state and then enable it temporarily.
-			if( !rangefinderPrevState )
-			{	agt.setRangefinder(true, false);	}// if
-		}// ctor
+			// If we're done, set the rangefinder back to the way it was.  Note that the *visibility* of the rangefinder isn't touched, here.
+			agent.setRangefinder( rangefinderPrevState );
+			return true;
+		}// if
+		else
+		{	return false;	}// else
+	}// runTick()
+private:
+	Agent& agent;
+	relVec totalDist;
+	const f32 speed;
+	bool rangefinderPrevState; // Restored to this state upon termination
+};// ActAgentMove
 
-		// DTOR
-		virtual ~ActAgentMove() {}
+//class LoaderAgentSeekWaypoint
+//{
+//};//
 
-		bool runTick( const f32 frameDeltaTime )
-		{
-			relVec dist( frameDeltaTime * speed );
-
-			// If we'd be going to far, scale back
-			if( dist.getLengthSQ() > totalDist.getLengthSQ() )
-			{	dist = totalDist;	}// if
-
-			// TODO: Optional:
-			agent.getDriver().draw3DLine( agent.getAbsolutePosition().toIrr_vector3df(), dist.to_absVec(agent.getBody()).toIrr_vector3df() );
-
-			// Do we avoid hitting a wall on the way?
-			bool success = agent.moveAtomic( dist );
-			if( success )
-			{	totalDist -= dist;	}// if
-
-			assert( relVec() == relVec(0.0,0.0) );// TODO: delete.
-
-			if ( !success || (totalDist == relVec()) ) // i.e., we ran into a wall and had to stop OR we've completed the movement.
-			{
-				// If we're done, set the rangefinder back to the way it was.  Note that the *visibility* of the rangefinder isn't touched, here.
-				agent.setRangefinder( rangefinderPrevState );
-				return true;
-			}// if
-			else
-			{	return false;	}// else
-		}// runTick()
-	private:
-		Agent& agent;
-		relVec totalDist;
-		const f32 speed;
-		bool rangefinderPrevState; // Restored to this state upon termination
-	};// ActAgentMove
+// ************ ACT AGENT SEEK WAYPOINT
+// id=act-agent-seek-waypoint, id=waypoint
+class ActAgentSeekPosition : public ITickAction
+{
+public:
+	ActAgentSeekPosition( Agent& agt, const vector3df& dest, f32 spd );
+	virtual ~ActAgentSeekPosition();
+	virtual bool runTick( const f32 frameDeltaTime );
+private:
+	Agent& agent;
+	//PathNode& waypoint;
+	//const absVec& dest;
+	const vector3df& dest;
+	const f32 speed;
+};// ActAgentSeekPosition
 }// actions
 
 //id=draw-circle
@@ -486,6 +443,36 @@ void Agent::updateSensors(const TAgentsIterator& begin, const TAgentsIterator& e
 	if( getActivation() )
 	{ setActivationOutput( DrawPieSlices( begin, end, getActivationLevelsVisible() ) ); }// if
 }// updateSensors()
+
+template <typename TWaypointsList>
+actions::ActionSequence* Agent::visitWaypoints( const TWaypointsList& pointsList, f32 speed )
+{
+	using namespace cj::actions;
+
+	ActionSequence* act = new ActionSequence;
+
+	for( typename TWaypointsList::const_iterator it = pointsList.begin(); it != pointsList.end(); ++it )
+	{
+dpr("Pushed " << *it);
+		act->push_back( new ActAgentSeekPosition(*this, *it, speed) );
+	}// for
+
+	assert( act->size() == pointsList.size() );
+
+	setCurrentAction(act);
+
+	return act;
+}// visitWaypoints()
+
+//actions::ActAgentMove* const Agent::seek( const absVec& dest, f32 speed, f32 turnspeed )
+//{
+	//const absVec dest_conv = absVec::from_vector3df(dest);
+	//actions::ActAgentMove* const newact = move( dest_conv.to_relVec(getBody()), speed );
+	////actions::ActAgentMove* const newact = move( dest.to_relVec(getBody()), speed );
+	//if( turnspeed != 0.0 )
+	//{	turn( dest.to_relAngle(getBody()), turnspeed );	}// if
+	//return newact;
+//}// seek()
 
 
 }// cj
