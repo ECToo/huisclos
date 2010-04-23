@@ -452,12 +452,40 @@ inline void Game::setActivation( bool mode )
 	assert( getActivation() == gui().getActivation() );
 }// setActivation()
 
-inline bool Game::getRangefinder() const
+bool Game::getRangefinder() const
 {	return getIsPCSet() && getPC().getRangefinder();	}// getRangefinder()
-inline bool Game::getRadar() const
+bool Game::getRadar() const
 {	return getIsPCSet() && getPC().getRadar();	}// getRadar()
-inline bool Game::getActivation() const
+bool Game::getActivation() const
 {	return getIsPCSet() && getPC().getActivation();	}// getActivation()
+
+AgentsList::const_iterator Game::findAgent( const Agent& agent ) const
+{	return find( agents().begin(), agents().end(), agent ); }// findAgent()
+AgentsList::iterator Game::findAgent( const Agent& agent )
+{	return find( agents().begin(), agents().end(), agent ); }// findAgent()
+
+AgentsList::const_iterator Game::findPC() const
+{
+	assert( getIsPCSet() );
+	return findAgent( getPC() );
+}// getPCIndex()
+// Idem, non-const
+AgentsList::iterator Game::findPC()
+{
+	assert( getIsPCSet() );
+	return findAgent( getPC() );
+}// getPCIndex()
+
+const GameGUI& Game::gui() const
+{
+	assert( gameGUI );
+	return *gameGUI;
+}// gui()
+GameGUI& Game::gui()
+{
+	assert( gameGUI );
+	return *gameGUI;
+}// gui()
 
 // id=addagent
 Agent& Game::addAgent(IAnimatedMesh* const mesh,
@@ -627,7 +655,6 @@ dpr("* MAIN GAME LOOP...");
 			{	breakToShell();	}// if
 			else
 			{
-				// TODO: Verify:
 				// "debounce" safeguard:
 				static bool release;
 				// Test for <C-g>, which shows|hides GUI:
@@ -708,6 +735,41 @@ dpr( "* Initializing." );
 	run();
 }// start()
 
+// TODO: Put on heap; pass byref w/ a smart-ptr to avoid copying?
+vector<f32> Game::drawFeelers()
+{
+	assert( getIsPCSet() );
+	// FIXME: 'debug' parm
+	return getPC().DrawFeelers( true );
+}// drawFeelers()
+
+vector<pointOfInterest> Game::drawCircle()
+{
+	assert( getIsPCSet() );
+	// FIXME: 'debug' parm
+	return getPC().DrawCircle( agents().begin(), agents().end(), true );
+}// drawCircle()
+
+vector<f32> Game::drawPieSlices()
+{
+	assert( getIsPCSet() );
+	// FIXME: 'debug' parm
+	return getPC().DrawPieSlices( agents().begin(), agents().end(), true );
+}// drawPieSlices()
+
+const vector<f32>& Game::getRangefinderOutput() const
+{
+	assert( getIsPCSet() );
+	return getPC().getRangefinderOutput();
+}// getRangefinderOutput()
+
+// Show|hide GUI: <C-g>
+bool Game::getToggleGUIKeypress() const
+{	return receiver().isKeyPressed(irr::KEY_KEY_G) && receiver().ctrlPressed();	}// getToggleGUIKeypress()
+
+// BREAK: <C-d>
+bool Game::getBreakKeypress() const
+{	return receiver().isKeyPressed(irr::KEY_KEY_D) && receiver().ctrlPressed();	}// getBreakKeypress()
 
 // TODO: If not too expensive, rewrite the controls as using Agent#turn() and Agent#move() action commands.
 // TODO: Every so often the turning-angle goes out of [0,360) and throws; I don't know what the deal is.
