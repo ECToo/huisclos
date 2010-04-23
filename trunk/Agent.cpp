@@ -304,10 +304,10 @@ bool Agent::moveAtomic( const relVec& dest )
 }
 
 void Agent::clearCurrentAction()
-{	
+{
 	if( currentAction != NULL )
 	{
-		delete currentAction;	
+		delete currentAction;
 		currentAction = NULL;
 	}// if
 }// clearCurrentAction()
@@ -330,7 +330,7 @@ actions::ActAgentSeekPosition* const Agent::Goto( const vector3df& dest, f32 spe
 // id=seek
 actions::ITickAction* const Agent::Seek( const vector3df& dest, f32 speed, const Wall& w, bool debug )
 {
-	return visitWaypoints( const_cast<Wall&>(w).AStar(getBody().getPosition(), dest, debug), speed );
+	return visitWaypoints( const_cast<Wall&>(w).AStar(getBody().getPosition(), dest, 2, debug), speed );
 }// Seek()
 
 void Agent::clearAllActions()
