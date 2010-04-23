@@ -10,7 +10,7 @@ s32 Agent::genID()
 {  return ++nextAvailableID;  }
 
 Agent::Agent(IrrlichtDevice* d, stringw mesh, stringw t, stringw h, vector3df p)
- : device(d), path(h), texture(t), wheel(360,80,40)
+ : device(d), path(h), texture(t), wheel(360,80,100)
 {
     //initialize naming short cuts
     driver = device->getVideoDriver();
@@ -44,7 +44,7 @@ Agent::Agent(IrrlichtDevice* d, stringw mesh, stringw t, stringw h, vector3df p)
 }
 
 Agent::Agent(IrrlichtDevice* d, stringw mesh, stringw t, stringw h, vector3df p, AIBrain b)
- : device(d), path(h), texture(t), wheel(360,80,40), brain(b)
+ : device(d), path(h), texture(t), wheel(360,80,100), brain(b)
 {
     //initialize naming short cuts
     driver = device->getVideoDriver();
@@ -453,7 +453,7 @@ void Agent::Act(void)
 
 void Agent::Seek(vector3df goal, Wall *w, bool track)
 {
-   route = w->AStar(body->getPosition(), goal, track);
+   route = w->AStar(body->getPosition(), goal, 2, track);
    route.push_back(goal);
    if(track)  //only track the goal passed in from game
    {  clock_gettime(CLOCK_REALTIME, &gstart);  }
@@ -493,14 +493,19 @@ void Agent::SmartNavigate(void)
    if(wheel.HasGoal())
    {
        //Set rotation and attempt to move to position (checks for collisions)
-      body->setRotation(body->getRotation() + wheel.GetRotation());
-      if(!MoveVector(wheel.GetStep()).empty())
-      {
+      cout << "current: " << body->getRotation().Y << " change: " << wheel.GetRotation().Y << endl;
+      f32 newangle = body->getRotation().Y + wheel.GetRotation().Y;
+      if(newangle > 360)
+      {  newangle -= 360;  }
+      body->setRotation(vector3df(0,newangle,0));
+
+      //if(!MoveVector(wheel.GetStep()).empty())
+      //{
          //make sure we keep the original goal
          //if(route.empty())
          //{  route.push_back(wheel.GetGoal());  }
 
-      }
+      //}
       wheel.NextStep(bodytrans);
    }
    else if(!route.empty())

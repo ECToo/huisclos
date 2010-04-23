@@ -60,10 +60,11 @@ void Game::Init(void)
    smgr->addCameraSceneNode(0, vector3df(0,200,0), vector3df(0,0,0));
    wall = new Wall(device, "t351sml.jpg");
    wall->makeWall(1,20,vector3df(0,0,20));
+   wall->makeWall(1,15,vector3df(20,0,20));
    wall->makeWall(1,20,vector3df(70,0,50));
    wall->makeWall(10,1,vector3df(0,0,-20));
-   wall->makeWall(1,20,vector3df(-75,0,50));
-   population = 6;
+   wall->makeWall(1,20,vector3df(-70,0,50));
+   population = 1;
    gen_gap = 20;
    generation = 1;
    startvector = vector3df(40,0,0);
@@ -85,8 +86,6 @@ void Game::Init(void)
          totscores.push_back(0);
       }
       agents[0]->Seek(vector3df(-50,0,-50), wall, true);
-      agents[1]->Seek(vector3df(-50,0,-50), wall, false);
-      agents[2]->Seek(vector3df(-50,0,-50), wall, false);
    }
    else
    {
