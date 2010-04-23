@@ -9,6 +9,7 @@ using namespace irr;
 using namespace irr::core;
 using namespace irr::scene;
 using namespace irr::video;
+using namespace std;
 
 namespace cj
 {
@@ -16,7 +17,7 @@ namespace cj
 class SteeringBehavior
 {
    public:
-      SteeringBehavior(const f32 maxrot, const f32 maxvel, const f32 maxacc);
+      SteeringBehavior(f32 ma, f32 mxf, f32 mxs);
       ~SteeringBehavior();
       void SetGoal(vector3df g);  //Move to this point
       vector3df GetRotation(void);  //Return absolute rotation
@@ -28,20 +29,22 @@ class SteeringBehavior
 
    private:
       const f64 EPSILON;  //zero
-      const f32 MAXROTATE;  //degrees per second
-      const f32 MAXVELOCITY;  //game units per second
-      const f32 MAXACCEL;  //game units per second^2
       bool done;  //goal acheived
+      bool almost;
       vector3df goal;  //target position
       vector3df step;  //next stop location
       vector3df rotate;  //next rotation amount
-      vector3df position;  //current position
-      vector3df velocity;  //current velocity
-      vector3df heading;  //current heading directly forward
       timespec lastStep;  //time of last step
       timespec thisStep;  //time of this step
       f64 interval;  //time elapsed since last step
       f32 timescale;  //used to accelerate time
+      f32 mass;
+      vector3df position;  //current position
+      vector3df velocity;  //current velocity
+      f32 max_force;
+      f32 max_speed;
+      f32 heading;
+
 
       f32 CalcRotation(vector3df target);  //Calculate absolute heading
       bool CalcVelocity(vector3df target, f32 r);  //Calculate velocity
