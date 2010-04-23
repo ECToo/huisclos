@@ -1,4 +1,3 @@
-// J. Jakes-Schauer
 #ifndef __GAME_HPP__
 #define __GAME_HPP__
 
@@ -26,10 +25,6 @@
 // <url:vimscript::%s/\\v(\\s)(scene::)/\\1irr::\\2/g>
 // <url:vimscript::%s/\\v(\\s)(gui::)/\\1irr::\\2/g>
 
-//* TODO: Functions for toggling 'debugmode mode', or 'control mode', or w/e, wh/ activates the HUD, among whatever else.
-
-
-// TODO: Check invariants more often.
 namespace cj
 {
 	using namespace cj::actions;
@@ -42,8 +37,6 @@ namespace cj
 	//typedef std::vector<IAction> ActionsList;
 	//typedef boost::ptr_vector<ITickAction> ActionsList;
 	//typedef std::list<IPersistentAction*> PersistentActionsList;
-
-
 
 	static const stringw DEFAULT_MESH = "faerie.md2";
 	static const stringw DEFAULT_TEXTURE = "Faerie5.BMP";
@@ -75,14 +68,10 @@ namespace cj
 	{
 	// id=public
 	public:
-
-		//static std::list<vector3df> AStar( const vector3df& start, const vector3df& dest, bool debug=true );
-
 		// (Used by EventHandler:)
 		template <EGUI_EVENT_TYPE>
-		inline static bool handleIt(IGUIElement* const whateverElement) { return false; }// ⁅Yes, I know 'inline' is redundant.⁆
+		static bool handleIt(IGUIElement* const whateverElement) { return false; }// 
 
-		// STATIC CONSTANT
 		static const irr::core::dimension2d<u32> DEFAULT_RESOLUTION;
 
 		// id=ctor
@@ -151,40 +140,20 @@ namespace cj
 		virtual void setRangefinder( bool mode=true );
 		virtual void setRadar( bool mode=true );
 		virtual void setActivation( bool mode=true );
-
 		virtual bool getRangefinder() const;
 		virtual bool getRadar() const;
 		virtual bool getActivation() const;
 
 		// Returns an iterator to the Agent if it be a valid reference.  [Don't know why it wouldn't.].  Or the usual end() iterator on failure.
 		//inline s32 Game::findAgent( const Agent& agent ) const
-		inline AgentsList::const_iterator findAgent( const Agent& agent ) const
-		{	return find( agents().begin(), agents().end(), agent ); }// findAgent()
-		inline AgentsList::iterator findAgent( const Agent& agent )
-		{	return find( agents().begin(), agents().end(), agent ); }// findAgent()
+		AgentsList::const_iterator findAgent( const Agent& agent ) const;
+		AgentsList::iterator findAgent( const Agent& agent );
 
-		inline AgentsList::const_iterator findPC() const
-		{
-			assert( getIsPCSet() );
-			return findAgent( getPC() );
-		}// getPCIndex()
-		// Idem, non-const
-		inline AgentsList::iterator findPC()
-		{
-			assert( getIsPCSet() );
-			return findAgent( getPC() );
-		}// getPCIndex()
+		AgentsList::const_iterator findPC() const;
+		AgentsList::iterator findPC();
 
-		const GameGUI& gui() const
-		{
-			assert( gameGUI );
-			return *gameGUI;
-		}// gui()
-		GameGUI& gui()
-		{
-			assert( gameGUI );
-			return *gameGUI;
-		}// gui()
+		const GameGUI& gui() const;
+		GameGUI& gui();
 
 		Agent& addAgent(IAnimatedMesh* const mesh,
 			ITexture* const texture,
@@ -224,48 +193,21 @@ namespace cj
 		void start();
 
 		// TODO: Put on heap; pass byref w/ a smart-ptr to avoid copying?
-		inline vector<f32> drawFeelers()
-		{
-			assert( getIsPCSet() );
-			// FIXME: 'debug' parm
-			return getPC().DrawFeelers( true );
-		}// drawFeelers()
-
-		inline vector<pointOfInterest> drawCircle()
-		{
-			assert( getIsPCSet() );
-			// FIXME: 'debug' parm
-			return getPC().DrawCircle( agents().begin(), agents().end(), true );
-		}// drawCircle()
-
-		inline vector<f32> drawPieSlices()
-		{
-			assert( getIsPCSet() );
-			// FIXME: 'debug' parm
-			return getPC().DrawPieSlices( agents().begin(), agents().end(), true );
-		}// drawPieSlices()
-
-		const vector<f32>& getRangefinderOutput() const
-		{
-			assert( getIsPCSet() );
-			return getPC().getRangefinderOutput();
-		}// getRangefinderOutput()
+		vector<f32> drawFeelers();
+		vector<pointOfInterest> drawCircle();
+		vector<f32> drawPieSlices();
+		const vector<f32>& getRangefinderOutput() const;
 
 		// Show|hide GUI: <C-g>
-		bool getToggleGUIKeypress() const
-		{	return receiver().isKeyPressed(irr::KEY_KEY_G) && receiver().ctrlPressed();	}// getToggleGUIKeypress()
-
+		bool getToggleGUIKeypress() const;
 		// BREAK: <C-d>
-		bool getBreakKeypress() const
-		{	return receiver().isKeyPressed(irr::KEY_KEY_D) && receiver().ctrlPressed();	}// getBreakKeypress()
+		bool getBreakKeypress() const;
 	// id=private
 	private:
-		// CLASS DATA
 		static Game* irrInstance;
 		static bool hasBeenRun;
 		static const recti HUDBB;
 
-		// INSTANCE DATA
 		u32 curTick;
 		u32 prevTick;
 		GameState gameState;
@@ -279,10 +221,7 @@ namespace cj
 		ICameraSceneNode* camera;
 		// NB: Declared as a ptr to control destruction order.  I would still prefer to eliminate pointer vars as much as possible:
 		AgentsList* const agentsList;
-		//std::vector<Agent*> agentsList;
 		WallsList* const wallsList;
-		// FIXME:
-		//ActionsList actionsList;
 		PersistentActionsList persistentActionsList;
 		Agent* pc;
 		GameGUI* gameGUI;
@@ -302,7 +241,7 @@ namespace cj
 		// Executes Agent movements &c.:
 		void doTickAgentsActions();
 
-		// Updates readout of mouse coords in realtime, on each tick.
+		// Updates readout of mouse coords in real-time, on each tick.
 		//void runMouseOutputTick();
 
 		// Updates Agents' coords in realtime in GameGUI list:
