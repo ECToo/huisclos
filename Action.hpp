@@ -60,7 +60,7 @@ namespace cj
 					const bool finished = front().runTick( frameDelta );
 					if( finished )
 					{	
-dpr("Popped.");				
+//dpr("Popped.");				
 						pop_front();	
 					}// if
 				}// if

@@ -50,7 +50,7 @@ int main()
 	Agent& faerie = game.addAgent( vector3df(0,0,100) );
 
 	//faerie.Goto( vector3df(30,0,0), 30 );
-	faerie.Seek(vector3df(-50,0,-50), 10, wall, true);
+	faerie.Seek(vector3df(-50,0,-50), 30, wall, true);
       //agents[0]->Seek(vector3df(-50,0,-50), wall, true);
 
 	//game.setViewMode( Game::FIRST_PERSON );

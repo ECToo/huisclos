@@ -45,9 +45,10 @@ public:
 
 	static s32 nextAvailableID;
 	static s32 genID(); // Returns the next unused Agent ID int.
+	static bool getLineOfSightExists( const Agent& a1, const Agent& a2 );// true if l-o-s exists between the named Agents.
 
 	// id=Ctor
-	Agent(IrrlichtDevice* d, stringw mesh, stringw t, stringw h, const vector3df& p);
+	Agent(IrrlichtDevice* d, stringw mesh, stringw texture, stringw path, const vector3df& position);
 	// id=DTOR
 	virtual ~Agent();
 
@@ -69,10 +70,13 @@ public:
 	void turnAtomic( const relAngle& theta );
 	bool moveAtomic( const relVec& dest );
 
-	// ACTIONS:
-	actions::ActAgentSeekPosition* const Goto( const vector3df& dest, f32 speed );
+	// id=ACTIONS:
+	// Also look in protected: section.
+	actions::ActAgentSeekPosition* const Goto( const vector3df& dest, f32 speed );// Go straight to the destination.
 	template <typename TWaypointsList> actions::ActionSequence* visitWaypoints( const TWaypointsList& pointsList, f32 speed );
-	actions::ITickAction* const Seek( const vector3df& dest, f32 speed, const cj::Wall& w, bool debug=true );
+	actions::ITickAction* const Seek( const vector3df& dest, f32 speed, const cj::Wall& w, bool debug=true );// Pathfind to the destination with A*.
+	void clearAllActions();
+	void doTickActions( f32 frameDeltaTime );// Used by Game.
 
 	vector<f32> DrawFeelers(bool debug = false);  //wall collision detection
 	// TODO: Even better: make these func templates taking const_iterators.)
@@ -98,7 +102,7 @@ public:
 	void setActivationLevelsVisible( bool vis=true ) {	activationLevelsVisible = vis;	}//
 
 	AgentState getState() const;
-	void setState( AgentState& s );
+	void setState( AgentState s );
 
 	using sensor::SSensors::setRangefinder;
 	using sensor::SSensors::setRadar;
@@ -120,7 +124,12 @@ public:
 	// Called by Game; not for end-user.  Unfortunately, two of the sensor types require iteration, and the list will be traversed twice.  Coroutines would solve the problem.
 	template <typename TAgentsIterator> void updateSensors(const TAgentsIterator& begin, const TAgentsIterator& end);
 
-	void doTickActions( f32 frameDeltaTime );
+	const Agent* getAttackTarget() const;
+	Agent* getAttackTarget();
+	void setAttackTarget( Agent* const targ );
+	template <typename TAgentsList> vector<Agent*> getVisibleAgents( TAgentsList& ); // Returns list of all Agents visible to the caller.
+	//template <typename TAgentsList> vector<Agent*> getVisibleAgents( typename TAgentsList::iterator it, const typename TAgentsList::iterator end ); // Returns list of all Agents visible to the caller.
+	//bool isEnemyVisible(); // True if there is a line-of-sight to any other agent.
 
 	// (used by ActAgentMove::runTick() for debug-line drawing.  TODO: Perh. make this a property of the Action itself?)
 	IVideoDriver& getDriver() {	return *driver;	}// getDriver()
@@ -131,6 +140,10 @@ public:
 	// <TAG> CA - NOTE: Do not add public functions to Agent beyond this line.
 	// This will be my section.
 	bool MoveVector(vector3df distance);  //COLLISON MOVEMENT
+
+protected:
+	void clearCurrentAction();
+	void setCurrentAction( actions::ITickAction* const newact );
 
 // id=private
 private:
@@ -159,11 +172,11 @@ private:
 	actions::ITickAction* currentAction;
 	actions::ActionsList actionsList;
 	AgentState currentState;
+	Agent* attackTarget;
+	bool hasMoveTarget;
 
 	// Ctor body utility function:
 	void AgentCtorImpl(stringw mesh, const vector3df& p);
-
-	void setCurrentAction( actions::ITickAction* const newact );
 
 	// Setters for sensor data.
 	void setRangefinderOutput(const vector<f32>& vec ) { feelersOutput = vec;	}//
@@ -258,8 +271,8 @@ private:
 //{
 //};//
 
-// ************ ACT AGENT SEEK WAYPOINT
-// id=act-agent-seek-waypoint, id=waypoint
+// ************ ACT AGENT SEEK POSITION
+// id=position
 class ActAgentSeekPosition : public ITickAction
 {
 public:
@@ -268,9 +281,7 @@ public:
 	virtual bool runTick( const f32 frameDeltaTime );
 private:
 	Agent& agent;
-	//PathNode& waypoint;
-	//const absVec& dest;
-	const vector3df& dest;
+	const vector3df destination;
 	const f32 speed;
 };// ActAgentSeekPosition
 }// actions
@@ -444,7 +455,7 @@ actions::ActionSequence* Agent::visitWaypoints( const TWaypointsList& pointsList
 
 	for( typename TWaypointsList::const_iterator it = pointsList.begin(); it != pointsList.end(); ++it )
 	{
-dpr("Pushed " << *it);
+//dpr("Pushed " << *it);
 		act->push_back( new ActAgentSeekPosition(*this, *it, speed) );
 	}// for
 
@@ -454,6 +465,21 @@ dpr("Pushed " << *it);
 
 	return act;
 }// visitWaypoints()
+
+template <typename TAgentsList>
+vector<Agent*> Agent::getVisibleAgents( TAgentsList& allAgents )
+//vector<Agent*> Agent::getVisibleAgents( typename TAgentsList::iterator it, const typename TAgentsList::iterator end )
+{
+	vector<Agent*> visAgents;
+
+	for( typename TAgentsList::iterator it = allAgents.begin(); it != allAgents.end(); ++it )
+	{
+		if( (*this != *it) && getLineOfSightExists( *this, *it ) )
+		{	visAgents.push_back(&*it);	}// if
+	}// for
+
+	return visAgents;
+}// getVisibleAgents()
 
 //actions::ActAgentMove* const Agent::seek( const absVec& dest, f32 speed, f32 turnspeed )
 //{
