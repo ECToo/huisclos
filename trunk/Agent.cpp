@@ -19,6 +19,22 @@ s32 Agent::genID()
 // Counter for generating the next free ID#:
 s32 Agent::nextAvailableID = 0;
 
+bool Agent::getLineOfSightExists( const Agent& a1, const Agent& a2 )
+{
+	if( a1 == a2 ) { return true;	}// quick exit
+
+	line3df line;
+	line.start = a1.getBody().getPosition();
+	line.end = a2.getBody().getPosition();
+	triangle3df outtri;
+	vector3df point;
+
+	assert( a1.cmgr == a2.cmgr );
+
+	return( !a1.cmgr->getSceneNodeAndCollisionPointFromRay( line, point, outtri ) );
+}//
+
+
 // id=ctor ⁅This is a search marker for me in Vim⁆
 Agent::Agent(IrrlichtDevice* d, stringw mesh, stringw t, stringw h, const vector3df& p):
 	device(d),
@@ -32,7 +48,9 @@ Agent::Agent(IrrlichtDevice* d, stringw mesh, stringw t, stringw h, const vector
 	activationLevels(),
 	currentAction(NULL),
 	actionsList(),
-	currentState( Agent::MOVE )
+	currentState( Agent::MOVE ),
+	attackTarget(NULL),
+	hasMoveTarget(false)
 { AgentCtorImpl(mesh, p); }// ctor
 
 void Agent::AgentCtorImpl(stringw mesh, const vector3df& p)
@@ -224,7 +242,7 @@ absPos Agent::getAbsolutePosition() const
 Agent::AgentState Agent::getState() const
 {	return currentState;	}// getState()
 
-void Agent::setState( Agent::AgentState& s )
+void Agent::setState( Agent::AgentState s )
 {	currentState = s;	}// setState()
 
 void Agent::turnAtomic( const relAngle& theta ) {	setRotation( getRotation() + theta );	}// turnAtomic()
@@ -285,10 +303,18 @@ bool Agent::moveAtomic( const relVec& dest )
     return moved;
 }
 
+void Agent::clearCurrentAction()
+{	
+	if( currentAction != NULL )
+	{
+		delete currentAction;	
+		currentAction = NULL;
+	}// if
+}// clearCurrentAction()
+
 void Agent::setCurrentAction( actions::ITickAction* const newact )
 {
-	if( currentAction != NULL )
-	{	delete currentAction;	}// if
+	clearCurrentAction();
 
 	currentAction = newact;
 }// setCurrentAction()
@@ -301,10 +327,17 @@ actions::ActAgentSeekPosition* const Agent::Goto( const vector3df& dest, f32 spe
 	return newact;
 }// Goto()
 
+// id=seek
 actions::ITickAction* const Agent::Seek( const vector3df& dest, f32 speed, const Wall& w, bool debug )
 {
 	return visitWaypoints( const_cast<Wall&>(w).AStar(getBody().getPosition(), dest, debug), speed );
 }// Seek()
+
+void Agent::clearAllActions()
+{
+	// TODO: Fairly unimportant for now, with our using just one action
+	clearCurrentAction();
+}// clearAllActions()
 
 //inline void Agent::turnAtomic( const relAngle& theta )
 //{	setRotation( getRotation() + theta );	}// turnAtomic()
@@ -325,6 +358,18 @@ void Agent::doTickActions( f32 frameDeltaTime )
 		}// if
 	}// if
 }// doTickActions
+
+const Agent* Agent::getAttackTarget() const
+{	return attackTarget;	}//
+
+Agent* Agent::getAttackTarget()
+{	return attackTarget;	}//
+
+void Agent::setAttackTarget( Agent* const targ )
+{	attackTarget = targ;	}
+
+//bool Agent::isEnemyVisible()
+//{
 
 // <TAG> CA - NOTE: Do not add functions to Agent beyond this line.
 // This will be my section.
@@ -397,23 +442,24 @@ bool Agent::MoveVector(vector3df distance)
     return moved;
 }
 
+// id=action
 namespace actions
 {
 
-ActAgentSeekPosition::ActAgentSeekPosition( Agent& agt, const vector3df& ds, f32 spd ): agent(agt), dest(ds), speed(spd)
+ActAgentSeekPosition::ActAgentSeekPosition( Agent& agt, const vector3df& dest, f32 spd ): agent(agt), destination(dest), speed(spd)
 {}// ctor
 
 ActAgentSeekPosition::~ActAgentSeekPosition() {}
 
 bool ActAgentSeekPosition::runTick( const f32 frameDeltaTime )
 {
-//dpr("ActAgentMove tick");
-	vector3df remaining = dest - agent.getBody().getAbsolutePosition();
+//dpr("ActAgentMove tick to " << destination);
+	vector3df remaining = destination - agent.getBody().getAbsolutePosition();
 	f32 dist = frameDeltaTime * speed;
 	if( dist >= remaining.getLength() )
 	{ 	dist = remaining.getLength(); 	}// if
 
-	vector3df distVec = (dest - agent.getBody().getPosition());
+	vector3df distVec = (destination - agent.getBody().getPosition());
 	distVec.normalize() *= dist;
 //dpr("dist " << dist );
 
@@ -423,9 +469,9 @@ bool ActAgentSeekPosition::runTick( const f32 frameDeltaTime )
 	agent.getBody().setPosition( agent.getBody().getPosition() + distVec );
 	agent.getBody().updateAbsolutePosition();
 
-	if( agent.getBody().getAbsolutePosition() == dest )
+	if( agent.getBody().getAbsolutePosition() == destination )
 	{
-dpr("Arrived.");
+//dpr("Arrived at " << destination);
 		//waypoint.setFancyGraphic(false);
 		return true;
 	}// if

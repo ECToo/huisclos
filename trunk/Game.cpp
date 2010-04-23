@@ -895,44 +895,53 @@ void Game::doTickKeyboardIO()
 	}// if
 }// doTickKeyboardIO()
 
+// id=Agent
 void Game::doTickAgentsActions()
 {
 	for( AgentsList::iterator it = agents().begin(); it != agents().end(); ++it )
 	{
-		// TODO:
-		//// id=FSM tick:
-		//if( agent.getState() == DEAD )
-		//{
-			//// Play dead.
-		//}//
-		//else if( agent.getState() == ATTACK )
-		//{
-			//if( agent.isEnemyVisible() )
-			//{
-				//if( !agent.getAttackTarget() )
-				//{	agent.setAttackTarget( agent.getNearbyRandomEnemy() );	}//
-				//agent.doNextAttack();
-			//}//
-			//else
-			//{
-				//agent.setAttackTarget( NULL );
-				//agent.setState( MOVE );
-			//}//
-		//}//
-		//else if( agent.getState() == MOVE )
-		//{
-			//if( agent.isEnemyVisible() )
-			//{	agent.setState( ATTACK );	}//
-			//else
-			//{
-				//if( !agent.getMoveTarget() )
-				//{	agent.setMoveTarget( agent.getRandomWanderTarget() );	}//
-				//if( agent.hasArrived( agent.getMoveTarget() ) )
-				//{	agent.setMoveTarget( NULL );	}//
-				//else
-				//{	agent.doNextMovement();	}//
-			//}//
-		//}//
+		// id=FSM tick:
+		if( it->getState() == Agent::DEAD )
+		{
+			// Play dead.
+		}//
+		else
+		{
+			vector<Agent*> agentsSeen = it->getVisibleAgents( agents() );
+			//vector<Agent*> agentsSeen = it->getVisibleAgents( agents().begin(), agents().end() );
+
+			if( it->getState() == Agent::ATTACK )
+			{
+				if( !agentsSeen.empty() )
+				//if( it->isEnemyVisible() )
+				{
+					if( it->getAttackTarget() == NULL )
+					{	it->setAttackTarget( agentsSeen.front() );	}//
+					//TODO: {	it->setAttackTarget( it->getNearbyRandomEnemy() );	}//
+//					it->doNextAttack();
+				}//
+				else
+				{
+					it->setAttackTarget( NULL );
+					it->setState( Agent::MOVE );
+				}// else
+			}// if
+			else if( it->getState() == Agent::MOVE )
+			{
+				if( !agentsSeen.empty() )
+				//if( it->isEnemyVisible() )
+				{	it->setState( Agent::ATTACK );	}//
+				else
+				{
+					//if( !it->getHasMoveTarget() )
+					//{	it->setMoveTarget( it->getRandomWanderTarget() );	}//
+					//if( it->hasArrived( it->getMoveTarget() ) )
+					//{	it->setMoveTarget( NULL );	}//
+					//else
+					//{	it->doNextMovement();	}//
+				}// else
+			}// elif
+		}// else
 
 		if( !getIsPCSet() || (getPC() != *it) )
 		{	it->doTickActions(static_cast<f32>(curTick - prevTick) / 1000.f);	}// if
