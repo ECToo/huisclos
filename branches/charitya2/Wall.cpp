@@ -409,10 +409,6 @@ std::list<vector3df> Wall::AStar(vector3df start, vector3df goal, s32 smooth, bo
 bool Wall::PathIsWide(vector3df from, vector3df to)
 {
    bool wide = true;
-   cout << "From: ";
-   printpoint(from);
-   cout << "to: ";
-   printpoint(to);
    vector3df point, pf1, pf2, pt1, pt2;
    pf1 = to - from;
    if(iszero(pf1.X) && iszero(pf1.Z))
@@ -432,34 +428,16 @@ bool Wall::PathIsWide(vector3df from, vector3df to)
    pt2 += to;
    triangle3df outtri;
    line3d<f32> line(pf1,pt1);
-   cout << "PF1: ";
-   printpoint(pf1);
-   cout << "PF2: ";
-   printpoint(pf2);
-   cout << "PT1: ";
-   printpoint(pt1);
-   cout << "PT2: ";
-   printpoint(pt2);
 
    if(smgr->getSceneCollisionManager()->getSceneNodeAndCollisionPointFromRay(line, point, outtri))
-   {
-      wide = false;
-      cout << "collision: ";
-      printpoint(point);
-      cout << endl;
-   }
+   {  wide = false;  }
    else
    {
       line.start = pf2;
       line.end = pt2;
 
       if(smgr->getSceneCollisionManager()->getSceneNodeAndCollisionPointFromRay(line, point, outtri))
-      {
-         wide = false;
-         cout << "collision2: ";
-         printpoint(point);
-         cout << endl;
-      }
+      {  wide = false;  }
    }
 
    return wide;
