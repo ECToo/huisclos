@@ -20,7 +20,7 @@ Wall::~Wall()
 bool Wall::operator== (const Wall& rhs) const
 {	return &rhs == this;	}// ==()
 
-void Wall::addNode(u32 size, const vector3df& position)
+void Wall::addNode(u32 size, vector3df position)
 // creates a cube of size and places it at position
 {
    bool exists;
@@ -39,9 +39,9 @@ void Wall::addNode(u32 size, const vector3df& position)
       n = FindNode(position.X, position.Z);
       n->isWall = 2;
 
-      for(s32 i = 0; i < 8; i++)
+      for(s32 i = 0; i < 8; ++i)
       {
-         if(n->connection[i])
+         if(n->connection[i] && n->connection[i]->isWall == 0)
          {  n->connection[i]->isWall = 1;  }
       }
 
@@ -76,7 +76,7 @@ void Wall::makeWall(u32 length, u32 width, vector3df position)
    }
 }
 
-void Wall::ExpandSpace(const vector3df& a)
+void Wall::ExpandSpace(vector3df a)
 {
    if(xpos < a.X + 2*dsize)
    {
@@ -160,7 +160,9 @@ void Wall::InsertPath(s32 x, s32 z)
       newnode->point = vector3df(x, 0, z);
       newnode->isWall = 0;
       newnode->back = NULL;
+      newnode->backdir = -1;
       newnode->score = -1;
+      newnode->closed = false;
       newnode->count = -1;
       s32 dx[] = {dsize, dsize, 0, -dsize, -dsize, -dsize, 0, dsize};
       s32 dz[] = {0, -dsize, -dsize, -dsize, 0, dsize, dsize, dsize};
@@ -235,7 +237,7 @@ GraphNode* Wall::FindCloseNode(s32 x, s32 z)
    return paths.at(i);
 }
 
-std::list<vector3df> Wall::AStar(const vector3df& start, const vector3df& goal, bool debug)
+std::list<vector3df> Wall::AStar(vector3df start, vector3df goal, s32 smooth, bool debug)
 {
    std::list<vector3df> waypoints;
 
@@ -257,7 +259,9 @@ std::list<vector3df> Wall::AStar(const vector3df& start, const vector3df& goal, 
 
    gstart->back = NULL;
    gstart->count = 0;
+   gstart->backdir = -1;
    gstart->score = fabs(ggoal->point.X - gstart->point.X + ggoal->point.Z - gstart->point.Z);
+   gstart->closed = false;
    std::list<GraphNode*> open;
    open.push_front(gstart);
    std::list<GraphNode*> closed;
@@ -266,49 +270,79 @@ std::list<vector3df> Wall::AStar(const vector3df& start, const vector3df& goal, 
    while(!open.empty())
    {
       current = open.front();
-      //cout << "Checking (" << current->point.X << " " << current->point.Z << ")\n";
       open.pop_front();
+      if(current->closed)
+      {  continue;  }
 
       for(s32 i = 0; i < 8; i++)
       {
-         if(current->connection[i] && !(current->connection[i]->isWall) && current->connection[i]->score == -1)
+         GraphNode* gnext = current->connection[i];
+
+         if((gnext && gnext->score == -1) && (!(gnext->isWall) || (gnext->isWall == 1 && i % 2 == 0)))
          {
-            current->connection[i]->back = current;
-            if(i % 2)
-            {  current->connection[i]->count = current->count + SQRT2 * dsize;  }
+            gnext->back = current;
+            gnext->backdir = i;
+            if(i % 2 == 1)
+            {  gnext->count = current->count + SQRT2 * dsize;  }
             else
-            {  current->connection[i]->count = current->count + dsize;  }
-            current->connection[i]->score = current->connection[i]->count +
-               fabs(ggoal->point.X - current->connection[i]->point.X)
-               + fabs(ggoal->point.Z - current->connection[i]->point.Z);
-            InsertList(open,current->connection[i]);
-            //cout << "Adding (" << current->connection[i]->point.X << " " << current->connection[i]->point.Z << ")\n";
+            {  gnext->count = current->count + dsize;  }
+            gnext->score = gnext->count + fabs(ggoal->point.X - gnext->point.X)
+               + fabs(ggoal->point.Z - gnext->point.Z);
+            InsertList(open, gnext);
+         }
+         else if(gnext && gnext->score > -1 && !(gnext->closed))
+         {
+            f32 temp_count = 0.0;
+            if(i % 2)
+            {  temp_count = current->count + SQRT2 * dsize;  }
+            else
+            {  temp_count = current->count + dsize;  }
+
+            if(temp_count < gnext->count)
+            {
+               gnext->count = temp_count;
+               gnext->score = gnext->count + fabs(ggoal->point.X - gnext->point.X)
+                  + fabs(ggoal->point.Z - gnext->point.Z);
+               gnext->back = current;
+               gnext->backdir = i;
+               InsertList(open, gnext, true);
+            }
          }
       }
 
       closed.push_back(current);
+      current-> closed = true;
+
       if(current->point.X == ggoal->point.X && current->point.Z == ggoal->point.Z)
       {
+         GraphNode* previous = ggoal;
+         previous->backdir = -2;
          waypoints.push_front(goal);
+
          while(current)
          {
-            waypoints.push_front(current->point);
-            //cout << "(" << current->point.X << " " << current->point.Z << ")\n";
+            bool add = false;
 
-            if(debug)
+            for(s32 i = 0; i < 8; i++)
             {
-               IBillboardSceneNode *circle = smgr->addBillboardSceneNode(0, dimension2df(dsize,dsize), current->point);
-               circle->setMaterialType(EMT_TRANSPARENT_ALPHA_CHANNEL);
-               circle->setMaterialFlag(EMF_LIGHTING, false);
-               circle->setMaterialTexture(0, driver->getTexture("circle.png"));
+               if(!(current->connection[i]) || current->backdir != previous->backdir)
+               {
+                  add = true;
+                  break;  // exits for
+               }
             }
 
+            if(add || smooth == 0)
+            {  waypoints.push_front(current->point);  }
+
+            previous = current;
             current = current->back;
          }
 
-         break;
-      }
-   }
+         break;  // exits while
+      }  // end if(current->point.X == ggoal->point.X && current->point.Z == ggoal->point.Z)
+
+   }  // end while(!open.empty())
 
    std::list<GraphNode*>::iterator it = closed.begin();
 
@@ -316,13 +350,98 @@ std::list<vector3df> Wall::AStar(const vector3df& start, const vector3df& goal, 
    {
       (*it)->score = -1;
       (*it)->back = NULL;
+      (*it)->backdir = -1;
       (*it)->count = -1;
+      (*it)->closed = false;
+   }
+
+   for(it = open.begin(); it != open.end(); ++it)
+   {
+      (*it)->score = -1;
+      (*it)->back = NULL;
+      (*it)->backdir = -1;
+      (*it)->count = -1;
+      (*it)->closed = false;
+   }
+
+   if(smooth > 1)
+   {
+      std::list<vector3df>::iterator w1 = waypoints.begin();
+      std::list<vector3df>::iterator w2 = waypoints.begin();
+      if(w2 != waypoints.end())
+      {  ++w2;  }
+      vector3df last = start;
+
+      while(w2 != waypoints.end())
+      {
+         if(PathIsWide(last, (*w2)))
+         {
+            waypoints.erase(w1);
+            w1 = w2;
+            ++w2;
+         }
+         else
+         {
+            last = (*w1);
+            w1 = w2;
+            ++w2;
+         }
+      }
+   }
+
+   if(debug)
+   {
+      std::list<vector3df>::iterator w = waypoints.begin();
+      for(; w != waypoints.end(); w++)
+      {
+         IBillboardSceneNode *circle = smgr->addBillboardSceneNode(0, dimension2df(dsize,dsize), *w);
+         circle->setMaterialType(EMT_TRANSPARENT_ALPHA_CHANNEL);
+         circle->setMaterialFlag(EMF_LIGHTING, false);
+         circle->setMaterialTexture(0, driver->getTexture("circle.png"));
+      }
    }
 
    return waypoints;
 }
 
-GraphNode* Wall::NotWall(const vector3df& p)
+bool Wall::PathIsWide(vector3df from, vector3df to)
+{
+   bool wide = true;
+   vector3df point, pf1, pf2, pt1, pt2;
+   pf1 = to - from;
+   if(iszero(pf1.X) && iszero(pf1.Z))
+   {  return wide;  }
+   pf1.normalize();
+   pf1.rotateXZBy(90);
+   pf1 *= (dsize/2);
+   pf2 = pf1 * -1;
+   pf1 += from;
+   pf2 += from;
+   pt1 = from - to;
+   pt1.normalize();
+   pt1.rotateXZBy(90);
+   pt1 *= (dsize/2);
+   pt2 = pt1 * -1;
+   pt1 += to;
+   pt2 += to;
+   triangle3df outtri;
+   line3d<f32> line(pf1,pt1);
+
+   if(smgr->getSceneCollisionManager()->getSceneNodeAndCollisionPointFromRay(line, point, outtri))
+   {  wide = false;  }
+   else
+   {
+      line.start = pf2;
+      line.end = pt2;
+
+      if(smgr->getSceneCollisionManager()->getSceneNodeAndCollisionPointFromRay(line, point, outtri))
+      {  wide = false;  }
+   }
+
+   return wide;
+}
+
+GraphNode* Wall::NotWall(vector3df p)
 {
    vector3df close(round(p.X/dsize)*dsize,0,round(p.Z/dsize)*dsize);
    GraphNode* g = NULL;
@@ -342,7 +461,7 @@ GraphNode* Wall::NotWall(const vector3df& p)
    if(g->point.X != close.X || g->point.Z != close.Z)
    {  return g;  }
 
-   if(g->isWall)
+   if(g->isWall > 1)
    {
       if(close.X < g->point.X)
       {
@@ -391,14 +510,31 @@ GraphNode* Wall::NotWall(const vector3df& p)
    return g;
 }
 
-void Wall::InsertList(std::list<GraphNode*> &glist, GraphNode* node)
+void Wall::InsertList(std::list<GraphNode*> &glist, GraphNode* node, bool remove)
 {
    std::list<GraphNode*>::iterator it = glist.begin();
+   std::list<GraphNode*>::iterator it2 = glist.begin();
 
    for(; it != glist.end(); ++it)
    {
       if(node->score < (*it)->score)
-      {  break;  }
+      {
+         if(remove)
+         {
+            it2 = it;
+            ++it2;
+            for(; it2 != glist.end(); ++it2)
+            {
+               if((*it2) == node)
+               {
+                  glist.erase(it2);
+                  break;
+               }
+            }
+         }
+
+         break;
+      }
    }
 
    glist.insert(it, node);
