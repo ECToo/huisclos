@@ -443,7 +443,7 @@ bool Agent::MoveVector(vector3df distance)
     u32 old_resolution = resolution;
     // to speed up collision detection and make sure we detect from all angles
     awareness = 360;
-    range = 7;
+    range = 5;
     resolution = 7;
     // record success or failure of movement
     bool moved = false;
@@ -563,7 +563,10 @@ bool ActAgentSeekPosition::runTick( const f32 frameDeltaTime )
 	// TODO: Optional:
 	//agent.getDriver().draw3DLine( agent.getPosition().toIrr_vector3df(), dist.to_absVec(*agent.getBody().getParent()).toIrr_vector3df() );
 
+   f32 angle = atan2(distVec.X, distVec.Z) - PI/2;
+   angle *= 180/PI;
 	agent.getBody().setPosition( agent.getBody().getPosition() + distVec );
+	agent.getBody().setRotation(vector3df(0,angle,0));
 	agent.getBody().updateAbsolutePosition();
 
 	if( agent.getBody().getAbsolutePosition() == destination )
