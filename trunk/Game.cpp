@@ -8,6 +8,7 @@
 #include "ErrorWindow.hpp"
 #include "Agent.hpp"
 #include "Coordinates.hpp"
+#include "Fairy.hpp"
 
 #include <sstream> // wostringstream
 #include <algorithm> // find()
@@ -142,8 +143,6 @@ dpr( "* GAME DTOR " );
 	//agentsList = NULL; // const.
 	// Note: I'm not happy at not being able to use a smart pointer.
 
-//wcout << "* GAME DTOR middle: segfault coming up??" << std::endl;
-	// TODO: Wrap in auto_ptr ??
 	assert( eventReceiver != NULL );
 	delete eventReceiver;
 	eventReceiver = NULL;
@@ -293,6 +292,11 @@ WallsList& Game::walls()
 	assert( wallsList );
 	return *wallsList;
 }// walls()
+
+Wall const& Game::wall() const
+{	return walls().front();	}// wall()
+Wall& Game::wall()
+{	return walls().front();	}// wall()
 
 const cj::event::EventReceiver<Game>& Game::receiver() const
 {
@@ -488,46 +492,91 @@ GameGUI& Game::gui()
 }// gui()
 
 // id=addagent
-Agent& Game::addAgent(IAnimatedMesh* const mesh,
-	ITexture* const texture,
-	const core::vector3df& position,
-	//const absVec& position,
-	const core::vector3df& rotation,
-	const core::vector3df& scale,
-	ISceneNode* const parent,
-	const s32 id,
-	bool alsoAddIfMeshPointerZero
-) {
+Agent& Game::addAgent( Agent::MOB type,  const irr::core::vector3df position)
+{
+	Agent* newagent;
+
+	switch(type)
+	{
+		case Agent::FAIRY:
+			newagent = &addAgent( new Fairy(device(), position) );
+		break;
+		// TODO: Others
+	}// sw
+
+	// Output gameGUI: TODO: Perh. move this to GUI?
+	std::wostringstream msg( L"Agent ");
+	msg << newagent->getBody().getID() << " created at " << position;
+	gui().logWindowMessage( stringw( msg.str().c_str() ) );// TODO: Ugly set of conversions.
+
+	return *newagent;
+}// addAgent
+
+Agent& Game::addAgent( Agent* const newagent )
+{
 dpr( "Game::addAgent" );
 	const u32 ncount = agents().size();// debug only
 
 	// TODO: Destruct these at end of program, via ~Game().
-	Agent* const pNewagent = new Agent( irrDevice, "faerie.md2", "Faerie5.BMP", "", position); // Handoff, but push ISceneManager ref onto list.
+	//Agent* const pNewagent = new Agent( device(), "faerie.md2", "Faerie5.BMP", "", position); // Handoff, but push ISceneManager ref onto list.
 
-	assert( pNewagent );
-	//if( pNewagent == NULL ) throw "*** Err: Heap creation of new Agent failed: possible deficiency of memory??";
+	assert( newagent );
+	//if( newagent == NULL ) throw "*** Err: Heap creation of new Agent failed: possible deficiency of memory??";
 
 	// Add to list:
-	agents().push_back( pNewagent );
+	agents().push_back( newagent );
 	assert( agents().size() == ncount + 1 );
 
 	// Add to GUI:
-	gui().addToAgentsListBox( *pNewagent );
+	gui().addToAgentsListBox( *newagent );
 
-
-	// Output gameGUI: TODO: Perh. move this to GUI?
-	std::wostringstream msg( L"Agent ");
-	msg << pNewagent->getBody().getID() << " created at " << position;
-	gui().logWindowMessage( stringw( msg.str().c_str() ) );// TODO: Ugly set of conversions.
-
-	assert( pNewagent );
-	return *pNewagent;
+	return *newagent;
 }// addAgent()
+
 
 Agent& Game::addAgent( const vector3df& position )
 {
-	return addAgent( smgr().getMesh(DEFAULT_MESH.c_str()), driver().getTexture(DEFAULT_TEXTURE.c_str()), position, vector3df(0.0f,0.0f,0.0f), vector3df(1.0f, 1.0f, 1.0f) );
+	return addAgent( Agent::FAIRY, position );
+	//return addAgent( smgr().getMesh(DEFAULT_MESH.c_str()), driver().getTexture(DEFAULT_TEXTURE.c_str()), position, vector3df(0.0f,0.0f,0.0f), vector3df(1.0f, 1.0f, 1.0f) );
 }// addAgent()
+
+
+// Deprecated:
+//Agent& Game::addAgent(IAnimatedMesh* const mesh,
+	//ITexture* const texture,
+	//const core::vector3df& position,
+	////const absVec& position,
+	//const core::vector3df& rotation,
+	//const core::vector3df& scale,
+	//ISceneNode* const parent,
+	//const s32 id,
+	//bool alsoAddIfMeshPointerZero
+//) {
+//dpr( "Game::addAgent" );
+	//const u32 ncount = agents().size();// debug only
+
+	//// TODO: Destruct these at end of program, via ~Game().
+	//Agent* const pNewagent = new Agent( device(), "faerie.md2", "Faerie5.BMP", "", position); // Handoff, but push ISceneManager ref onto list.
+
+	//assert( pNewagent );
+	////if( pNewagent == NULL ) throw "*** Err: Heap creation of new Agent failed: possible deficiency of memory??";
+
+	//// Add to list:
+	//agents().push_back( pNewagent );
+	//assert( agents().size() == ncount + 1 );
+
+	//// Add to GUI:
+	//gui().addToAgentsListBox( *pNewagent );
+
+
+	//// Output gameGUI: TODO: Perh. move this to GUI?
+	//std::wostringstream msg( L"Agent ");
+	//msg << pNewagent->getBody().getID() << " created at " << position;
+	//gui().logWindowMessage( stringw( msg.str().c_str() ) );// TODO: Ugly set of conversions.
+
+	//assert( pNewagent );
+	//return *pNewagent;
+//}// addAgent()
 
 // TODO: removeAgent() and removeWall(), both forms, are nearly identical and could be refactored.
 // id=remove-agent
@@ -900,51 +949,63 @@ void Game::doTickAgentsActions()
 {
 	for( AgentsList::iterator it = agents().begin(); it != agents().end(); ++it )
 	{
-		// id=FSM tick:
-		if( it->getState() == Agent::DEAD )
-		{
-			// Play dead.
-		}//
-		else
-		{
-			vector<Agent*> agentsSeen = it->getVisibleAgents( agents() );
-			//vector<Agent*> agentsSeen = it->getVisibleAgents( agents().begin(), agents().end() );
-
-			if( it->getState() == Agent::ATTACK )
-			{
-				if( !agentsSeen.empty() )
-				//if( it->isEnemyVisible() )
-				{
-					if( it->getAttackTarget() == NULL )
-					{	it->setAttackTarget( agentsSeen.front() );	}//
-					//TODO: {	it->setAttackTarget( it->getNearbyRandomEnemy() );	}//
-//					it->doNextAttack();
-				}//
-				else
-				{
-					it->setAttackTarget( NULL );
-					it->setState( Agent::MOVE );
-				}// else
-			}// if
-			else if( it->getState() == Agent::MOVE )
-			{
-				if( !agentsSeen.empty() )
-				//if( it->isEnemyVisible() )
-				{	it->setState( Agent::ATTACK );	}//
-				else
-				{
-					//if( !it->getHasMoveTarget() )
-					//{	it->setMoveTarget( it->getRandomWanderTarget() );	}//
-					//if( it->hasArrived( it->getMoveTarget() ) )
-					//{	it->setMoveTarget( NULL );	}//
-					//else
-					//{	it->doNextMovement();	}//
-				}// else
-			}// elif
-		}// else
-
 		if( !getIsPCSet() || (getPC() != *it) )
-		{	it->doTickActions(static_cast<f32>(curTick - prevTick) / 1000.f);	}// if
+		{
+			// id=FSM tick:
+			if( it->getState() == Agent::DEAD )
+			{
+				// TODO: Play dead.
+			}// if
+			else
+			{
+				if(  it->getState() == Agent::MANUAL )
+				{	/*Continue to doTickActions()*/	}// if
+				else// FSM
+				{
+					vector<Agent*> agentsSeen = it->getVisibleAgents( agents() );
+					//vector<Agent*> agentsSeen = it->getVisibleAgents( agents().begin(), agents().end() );
+
+					if( it->getState() == Agent::ATTACK )
+					{
+						if( it->getAttackTarget() == NULL )//
+						{
+							if( agentsSeen.empty() ) // transition to MOVE.
+							//if( !it->isEnemyVisible() )
+							{
+								it->setState( Agent::MOVE );
+							}// if
+							else // pick new target
+							{
+								const u32 random = 0; //TODO: : rand ∈ [0,agentsSeen.size())
+								//it->getNearbyRandomEnemy()
+								it->Attack( *(agentsSeen.front() + random) );
+							}// else
+						}// if
+						// else continue attacking
+					}// if
+					else if( it->getState() == Agent::MOVE )
+					{
+						// If nobody around, wander to a random point on the map.
+						if( agentsSeen.empty() )
+						//if( !it->isEnemyVisible() )
+						{
+							if( !it->getHasMoveTarget() )
+							{
+								it->Seek( wall().getRandomNodePosition(), wall() );
+								assert( it->getHasMoveTarget() );
+							}// if
+							// Continue to doTickActions()
+						}// if
+						else // transition to ATTACK.
+						{	it->setState( Agent::ATTACK ); }// else
+					}// elif MOVE state
+					else
+					{	assert(false); /* Invalid state*/ }// else
+				}// if not MANUAL
+
+				it->doTickActions(static_cast<f32>(curTick - prevTick) / 1000.f); // NEXT ACTION
+			}// elsif not dead
+		}// if not PC
 	}// for
 }// doTickAgentsActions()
 

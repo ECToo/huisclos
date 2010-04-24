@@ -16,6 +16,12 @@ s32 Agent::genID()
 	return nextAvailableID ++ ;
 }// genID()
 
+s32 Agent::getID() const
+{
+	assert( getBody().getID() < nextAvailableID );
+	return getBody().getID();
+}// getID()
+
 // Counter for generating the next free ID#:
 s32 Agent::nextAvailableID = 0;
 
@@ -36,7 +42,7 @@ bool Agent::getLineOfSightExists( const Agent& a1, const Agent& a2 )
 
 
 // id=ctor ⁅This is a search marker for me in Vim⁆
-Agent::Agent(IrrlichtDevice* d, stringw mesh, stringw t, stringw h, const vector3df& p):
+Agent::Agent(IrrlichtDevice* d, stringw mesh, stringw t, stringw h, const vector3df& p, const s32 HP, const s32 Str, const s32 Spd, const s32 Acc):
 	device(d),
 	path(h),
 	texture(t),
@@ -48,9 +54,13 @@ Agent::Agent(IrrlichtDevice* d, stringw mesh, stringw t, stringw h, const vector
 	activationLevels(),
 	currentAction(NULL),
 	actionsList(),
-	currentState( Agent::MOVE ),
+	currentState( Agent::MANUAL ),
 	attackTarget(NULL),
-	hasMoveTarget(false)
+	hasMoveTarget(false),
+	HitPoints(HP),
+	Strength(Str),
+	Speed(Spd),
+	Accuracy(Acc)
 { AgentCtorImpl(mesh, p); }// ctor
 
 void Agent::AgentCtorImpl(stringw mesh, const vector3df& p)
@@ -245,6 +255,9 @@ Agent::AgentState Agent::getState() const
 void Agent::setState( Agent::AgentState s )
 {	currentState = s;	}// setState()
 
+bool Agent::isDead() const
+{	return getState() == Agent::DEAD;	}// isDead()
+
 void Agent::turnAtomic( const relAngle& theta ) {	setRotation( getRotation() + theta );	}// turnAtomic()
 
 // id=moveAtomic
@@ -303,10 +316,16 @@ bool Agent::moveAtomic( const relVec& dest )
     return moved;
 }
 
+const actions::ITickAction* Agent::getCurrentAction() const
+{	return currentAction;	}
+actions::ITickAction* Agent::getCurrentAction()
+{	return currentAction;	}
+
 void Agent::clearCurrentAction()
 {
 	if( currentAction != NULL )
 	{
+dpr( "Clearing action." );
 		delete currentAction;
 		currentAction = NULL;
 	}// if
@@ -328,9 +347,10 @@ actions::ActAgentSeekPosition* const Agent::Goto( const vector3df& dest, f32 spe
 }// Goto()
 
 // id=seek
-actions::ITickAction* const Agent::Seek( const vector3df& dest, f32 speed, const Wall& w, bool debug )
+actions::ITickAction* const Agent::Seek( const vector3df& dest, const Wall& w, f32 speed, bool debug )
 {
-	return visitWaypoints( const_cast<Wall&>(w).AStar(getBody().getPosition(), dest, 2, debug), speed );
+	return visitWaypoints( const_cast<Wall&>(w).AStar(getBody().getPosition(), dest, 2, debug),
+		(speed == 0 ? getSpd() : speed) );
 }// Seek()
 
 void Agent::clearAllActions()
@@ -348,16 +368,21 @@ void Agent::doTickActions( f32 frameDeltaTime )
 
 	//for( ActionsList::iterator it = actionsList.begin(); it != actionsList.end(); ++it )
 	//{	it->runTick( frameDeltaTime );	}// for
-	if( currentAction )
+	if( getCurrentAction() )
 	{
-		const bool bDone = currentAction->runTick(frameDeltaTime);
+		const bool bDone = getCurrentAction()->runTick(frameDeltaTime);
 		if( bDone )
 		{
-			delete currentAction;
-			currentAction = NULL;
+			assert( getCurrentAction() );
+			clearCurrentAction();
 		}// if
 	}// if
 }// doTickActions
+
+void Agent::setHasMoveTarget( const bool b )
+{	 hasMoveTarget = b;	}
+bool Agent::getHasMoveTarget() const
+{	return hasMoveTarget;	}//
 
 const Agent* Agent::getAttackTarget() const
 {	return attackTarget;	}//
@@ -371,6 +396,42 @@ void Agent::setAttackTarget( Agent* const targ )
 //bool Agent::isEnemyVisible()
 //{
 
+void Agent::Die()
+{
+	setHP(0);
+	clearAllActions();
+	setState( Agent::DEAD );
+dpr("NPC " << getID() << " died.");
+	// TODO: play death animation
+}// Die()
+
+void Agent::TakeDamage( const s32 damage )
+{
+dpr( "HP: " << getHP() );
+	assert( getHP() > 0 );
+	if( damage == 0 )
+	{ /* NOP */ }// if
+	else if( damage > getHP() )
+	{ 	setHP( 0 ); }// elif
+	else
+	{	setHP( getHP() - damage );	}// else
+
+	// If I've had it
+	if( getHP() == 0 )
+	{
+		Die();
+		assert( getState() == Agent::DEAD );
+	}// if
+}// TakeDamage()
+
+actions::ActAgentAttack* const Agent::Attack( Agent& target )
+{
+	assert( Agent::getLineOfSightExists( *this, target ) );
+	actions::ActAgentAttack* newact = new actions::ActAgentAttack(*this, target);
+	assert(newact);
+	setCurrentAction(newact);
+	return newact;
+}// Attack()
 // <TAG> CA - NOTE: Do not add functions to Agent beyond this line.
 // This will be my section.
 
@@ -446,8 +507,42 @@ bool Agent::MoveVector(vector3df distance)
 namespace actions
 {
 
+// ctor
+ActAgentAttack::ActAgentAttack( Agent& atk, Agent& targ )
+: attacker(atk), target(targ)
+{
+	attacker.setAttackTarget(&target);
+	//TODO: Attack animation
+}// ctor
+
+ActAgentAttack::~ActAgentAttack()
+{
+	attacker.setAttackTarget( NULL );
+}// dtor
+
+bool ActAgentAttack::runTick( const f32 frameDeltaTime )
+{
+
+dpr( "Agent " << attacker.getID() << " attacks Agent " << target.getID() );
+	// TODO:
+	//calc hit chance based on ACC & dist
+	//random val
+	//if( val → hit )
+	{
+		//TODO: calculate damage based on random val & STR
+		const s32 damage = 10;
+		target.TakeDamage(damage);
+	}
+
+	return true;// one-shot
+}// runTick()
+
+// ctor
 ActAgentSeekPosition::ActAgentSeekPosition( Agent& agt, const vector3df& dest, f32 spd ): agent(agt), destination(dest), speed(spd)
-{}// ctor
+{
+	agent.setHasMoveTarget( true );
+	// TODO: Play movement animation
+}// ctor
 
 ActAgentSeekPosition::~ActAgentSeekPosition() {}
 
@@ -473,6 +568,7 @@ bool ActAgentSeekPosition::runTick( const f32 frameDeltaTime )
 	{
 //dpr("Arrived at " << destination);
 		//waypoint.setFancyGraphic(false);
+		agent.setHasMoveTarget( false );
 		return true;
 	}// if
 	else

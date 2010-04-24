@@ -118,6 +118,8 @@ namespace cj
 		AgentsList& agents();
 		const WallsList& walls() const;
 		WallsList& walls();
+		Wall const& wall() const;// Now that Wall is a singleton, we'll be using this.
+		Wall& wall();
 		const cj::event::EventReceiver<Game>& receiver() const;
 		// TODO: Make private?
 		cj::event::EventReceiver<Game>& receiver();
@@ -155,17 +157,21 @@ namespace cj
 		const GameGUI& gui() const;
 		GameGUI& gui();
 
-		Agent& addAgent(IAnimatedMesh* const mesh,
-			ITexture* const texture,
-			//const absVec& position = absVec(),
-			const irr::core::vector3df& position = irr::core::vector3df(0,0,0),
-			const irr::core::vector3df& rotation = irr::core::vector3df(0,0,0),
-			const irr::core::vector3df& scale = irr::core::vector3df(1.0f, 1.0f, 1.0f),
-			ISceneNode* const parent = 0,
-			const s32 id = -1,// TODO: Currently ignored.
-			bool alsoAddIfMeshPointerZero = false);
-		// Idem, quickie lazy version:
+		Agent& addAgent( Agent* const newagent );
+		// Add default agent by type.  TODO: Remove clumsy enum technique.
+		Agent& addAgent( Agent::MOB type,  const vector3df position = vector3df(0,0,0));
+		// Idem, quickie lazy version that makes a Fairy:
 		Agent& addAgent( const vector3df& position = vector3df() );
+		// Deprecated:
+		//Agent& addAgent(IAnimatedMesh* const mesh,
+			//ITexture* const texture,
+			////const absVec& position = absVec(),
+			//const irr::core::vector3df& position = irr::core::vector3df(0,0,0),
+			//const irr::core::vector3df& rotation = irr::core::vector3df(0,0,0),
+			//const irr::core::vector3df& scale = irr::core::vector3df(1.0f, 1.0f, 1.0f),
+			//ISceneNode* const parent = 0,
+			//const s32 id = -1,// TODO: Currently ignored.
+			//bool alsoAddIfMeshPointerZero = false);
 
 		// Removes & deallocates an Agent in O(n).  Do NOT reference an Agent not currently in-scene!
 		void removeAgent( Agent& agent );

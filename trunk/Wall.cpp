@@ -20,6 +20,14 @@ Wall::~Wall()
 bool Wall::operator== (const Wall& rhs) const
 {	return &rhs == this;	}// ==()
 
+vector3df Wall::getRandomNodePosition()
+{
+	u32 random = 0;/* TODO: : rand ∈ [0,paths.size()) */
+	//const vector<GraphNode*>::iterator it = paths.begin() + random;
+	//return it->point;
+	return (paths.front() + random)->point;
+}// Wall::getRandomNodePosition()
+
 void Wall::addNode(u32 size, vector3df position)
 // creates a cube of size and places it at position
 {
