@@ -46,6 +46,7 @@ class Wall
 {
    public:
       Wall(IrrlichtDevice* d, stringw t, u32 dsize = 10);
+      Wall(const Wall& other);
       ~Wall();
       void makeWall(u32 length, u32 width, vector3df position); //create a long wall
       void DrawNodes(void);
@@ -53,6 +54,7 @@ class Wall
       std::list<vector3df> AStar(vector3df start, vector3df goal, s32 smooth, bool debug = false);
       bool PathIsWide(vector3df from, vector3df to);
       bool operator== (const Wall& rhs) const;
+      Wall operator= (const Wall& rhs) const;
       vector3df getRandomNodePosition(); // Returns the coords for a random node in the graph.
    private:
       void addNode(u32 size, vector3df position); //creates a cube of size and places it at position

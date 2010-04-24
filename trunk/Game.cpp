@@ -993,15 +993,16 @@ dpr( "Agent " << it->getID() << " doing attack." );
 						{
 							if( !it->getHasMoveTarget() )
 							{
-dpr( "Agent " << it->getID() << " wandering." );
+//dpr( "Agent " << it->getID() << " wandering." );
 //dpr( walls().size() );
-								it->Seek( wall().getRandomNodePosition(), wall() );
-								assert( it->getHasMoveTarget() );
+								//it->Seek( wall().getRandomNodePosition(), wall() );
+								//assert( it->getHasMoveTarget() );
+
 							}// if
 							// Continue to doTickActions()
 						}// if
 						else // transition to ATTACK.
-						{	
+						{
 dpr( "Agent " << it->getID() << " MOVE -> ATTACK." );
 							it->setState( Agent::ATTACK ); }// else
 					}// elif MOVE state
