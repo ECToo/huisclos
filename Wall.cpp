@@ -5,11 +5,26 @@
 namespace cj
 {
 
+WallException::WallException(const char *msg)
+   : description(msg)
+{}
+
+WallException::~WallException()
+{}
+
+const char *WallException::Message(void) const
+{  return description;  }
+
+bool Wall::wall_exists = false;
+
 Wall::Wall(IrrlichtDevice* d, stringw t, u32 ds) : device(d), texture(t), dsize(ds)
 {
-    driver = device->getVideoDriver();
-    smgr = device->getSceneManager();
-    xpos = xneg = zpos = zneg = zrange = 0;
+   if(wall_exists)
+   {  throw WallException("ERROR: Only one cj::Wall can exist!");  }
+   driver = device->getVideoDriver();
+   smgr = device->getSceneManager();
+   xpos = xneg = zpos = zneg = zrange = 0;
+   wall_exists = true;
 }
 
 Wall::~Wall()
@@ -18,6 +33,7 @@ Wall::~Wall()
    vector<GraphNode*>::iterator it = paths.begin();
    for(;it != paths.end(); ++it)
    {  delete *it;  }
+   wall_exists = false;
 }
 
 bool Wall::operator== (const Wall& rhs) const
