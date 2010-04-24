@@ -1,4 +1,6 @@
 #include "Wall.hpp"
+#include "IO.hpp"
+#include "assert_swig.hpp"
 
 namespace cj
 {
@@ -12,6 +14,7 @@ Wall::Wall(IrrlichtDevice* d, stringw t, u32 ds) : device(d), texture(t), dsize(
 
 Wall::~Wall()
 {
+//dpr("Wall dtor.");
    vector<GraphNode*>::iterator it = paths.begin();
    for(;it != paths.end(); ++it)
    {  delete *it;  }
@@ -22,9 +25,10 @@ bool Wall::operator== (const Wall& rhs) const
 
 vector3df Wall::getRandomNodePosition()
 {
+dpr( "Picking random node." );
+dpr( paths.size() );
+	assert( !paths.empty() );
 	u32 random = 0;/* TODO: : rand ∈ [0,paths.size()) */
-	//const vector<GraphNode*>::iterator it = paths.begin() + random;
-	//return it->point;
 	return (paths.front() + random)->point;
 }// Wall::getRandomNodePosition()
 
@@ -155,6 +159,7 @@ void Wall::ExpandSpace(vector3df a)
 
 void Wall::InsertPath(s32 x, s32 z)
 {
+dpr( "InsertPath()" );
    vector<GraphNode*>::iterator it = paths.begin();
    for(; it != paths.end(); ++it)
    {
@@ -197,6 +202,7 @@ void Wall::InsertPath(s32 x, s32 z)
       }
 
       paths.insert(it, newnode);
+dpr( "Node count: " << paths.size() );
    }
 }
 

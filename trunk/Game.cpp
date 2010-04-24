@@ -972,10 +972,12 @@ void Game::doTickAgentsActions()
 							if( agentsSeen.empty() ) // transition to MOVE.
 							//if( !it->isEnemyVisible() )
 							{
+dpr( "Agent " << it->getID() << " ATTACK -> MOVE." );
 								it->setState( Agent::MOVE );
 							}// if
 							else // pick new target
 							{
+dpr( "Agent " << it->getID() << " doing attack." );
 								const u32 random = 0; //TODO: : rand ∈ [0,agentsSeen.size())
 								//it->getNearbyRandomEnemy()
 								it->Attack( *(agentsSeen.front() + random) );
@@ -991,13 +993,17 @@ void Game::doTickAgentsActions()
 						{
 							if( !it->getHasMoveTarget() )
 							{
+dpr( "Agent " << it->getID() << " wandering." );
+//dpr( walls().size() );
 								it->Seek( wall().getRandomNodePosition(), wall() );
 								assert( it->getHasMoveTarget() );
 							}// if
 							// Continue to doTickActions()
 						}// if
 						else // transition to ATTACK.
-						{	it->setState( Agent::ATTACK ); }// else
+						{	
+dpr( "Agent " << it->getID() << " MOVE -> ATTACK." );
+							it->setState( Agent::ATTACK ); }// else
 					}// elif MOVE state
 					else
 					{	assert(false); /* Invalid state*/ }// else
