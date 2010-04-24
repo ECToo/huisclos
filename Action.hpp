@@ -61,6 +61,7 @@ namespace cj
 					if( finished )
 					{	
 //dpr("Popped.");				
+						assert( !empty() );
 						pop_front();	
 					}// if
 				}// if
