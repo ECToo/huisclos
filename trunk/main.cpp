@@ -40,9 +40,12 @@ int main()
 
 	Wall wall = game.addWall();
 	wall.makeWall(1,20,vector3df(0,0,20));
-	wall.makeWall(1,20,vector3df(70,0,50));
-	wall.makeWall(10,1,vector3df(0,0,-20));
-	wall.makeWall(1,20,vector3df(-75,0,50));
+   wall.makeWall(1,20,vector3df(20,0,-20));
+   wall.makeWall(1,20,vector3df(70,0,50));
+   wall.makeWall(10,1,vector3df(0,0,-20));
+   wall.makeWall(5,1,vector3df(-40,0,-60));
+   wall.makeWall(5,1,vector3df(-10,0,-80));
+   wall.makeWall(1,20,vector3df(-70,0,50));
 
 	//Agent& pc = game.addAgent( vector3df(0,0,90) );
 	//game.setPC( pc );

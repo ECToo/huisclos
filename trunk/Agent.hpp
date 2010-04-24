@@ -4,6 +4,7 @@
 #include "assert_swig.hpp"
 #include <irrlicht.h>
 #include <vector>
+#include <math.h>
 #include "boost/utility.hpp" // boost::noncopyable
 
 #include "Wall.hpp"
@@ -520,8 +521,8 @@ vector<Agent*> Agent::getVisibleAgents( TAgentsList& allAgents, bool countIfDead
 
 	for( typename TAgentsList::iterator it = allAgents.begin(); it != allAgents.end(); ++it )
 	{
-		if( 	*this != *it &&  
-			( countIfDead || !it->isDead() ) && 
+		if( 	*this != *it &&
+			( countIfDead || !it->isDead() ) &&
 			getLineOfSightExists( *this, *it )
 		  ){	visAgents.push_back(&*it);	}// if
 	}// for
