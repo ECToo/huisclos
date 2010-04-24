@@ -27,7 +27,14 @@ struct pointOfInterest
 };
 
 // fwd dec
-namespace actions { class ActAgentSeekPosition; class ActAgentTurn; class ActAgentMove; }//
+namespace actions
+{
+	class ActAgentSeekPosition;
+	class ActAgentAttack;
+	//class ActAgentTurn;
+	//class ActAgentMove;
+	// TODO: ActAgentVisitWaypoints < ActionSequence
+}//
 
 // TODO: Change private to protected once subclass interface has been considered properly.
 class Agent : public boost::noncopyable, public sensor::SSensors
@@ -41,14 +48,18 @@ public:
 
 	typedef vector<pointOfInterest> ContactsList;
 
-	enum AgentState { DEAD, ATTACK, MOVE };
+	enum AgentState { MANUAL, DEAD, ATTACK, MOVE };
+
+	// TODO: Polymorphism would be superior.  Would mean changing addAgent() yet again.
+	enum MOB { FAIRY };// MOB
 
 	static s32 nextAvailableID;
 	static s32 genID(); // Returns the next unused Agent ID int.
+	s32 getID() const;
 	static bool getLineOfSightExists( const Agent& a1, const Agent& a2 );// true if l-o-s exists between the named Agents.
 
 	// id=Ctor
-	Agent(IrrlichtDevice* d, stringw mesh, stringw texture, stringw path, const vector3df& position);
+	Agent(IrrlichtDevice* d, stringw mesh, stringw texture, stringw path, const vector3df& position, const s32 HP, const s32 Str, const s32 Spd, const s32 Acc);
 	// id=DTOR
 	virtual ~Agent();
 
@@ -74,7 +85,7 @@ public:
 	// Also look in protected: section.
 	actions::ActAgentSeekPosition* const Goto( const vector3df& dest, f32 speed );// Go straight to the destination.
 	template <typename TWaypointsList> actions::ActionSequence* visitWaypoints( const TWaypointsList& pointsList, f32 speed );
-	actions::ITickAction* const Seek( const vector3df& dest, f32 speed, const cj::Wall& w, bool debug=true );// Pathfind to the destination with A*.
+	actions::ITickAction* const Seek( const vector3df& dest, const cj::Wall& w, f32 speed=0.00, bool debug=true );// Pathfind to the destination with A*.  Leaving speed=0 will cause that Agent's default speed to be used.
 	void clearAllActions();
 	void doTickActions( f32 frameDeltaTime );// Used by Game.
 
@@ -103,6 +114,7 @@ public:
 
 	AgentState getState() const;
 	void setState( AgentState s );
+	bool isDead() const;// predicate
 
 	using sensor::SSensors::setRangefinder;
 	using sensor::SSensors::setRadar;
@@ -124,15 +136,30 @@ public:
 	// Called by Game; not for end-user.  Unfortunately, two of the sensor types require iteration, and the list will be traversed twice.  Coroutines would solve the problem.
 	template <typename TAgentsIterator> void updateSensors(const TAgentsIterator& begin, const TAgentsIterator& end);
 
+	bool getHasMoveTarget() const;
+	void setHasMoveTarget( const bool b );
 	const Agent* getAttackTarget() const;
 	Agent* getAttackTarget();
 	void setAttackTarget( Agent* const targ );
-	template <typename TAgentsList> vector<Agent*> getVisibleAgents( TAgentsList& ); // Returns list of all Agents visible to the caller.
+	template <typename TAgentsList> vector<Agent*> getVisibleAgents( TAgentsList&, bool countIfDead=false ); // Returns list of all Agents visible to the caller.
 	//template <typename TAgentsList> vector<Agent*> getVisibleAgents( typename TAgentsList::iterator it, const typename TAgentsList::iterator end ); // Returns list of all Agents visible to the caller.
 	//bool isEnemyVisible(); // True if there is a line-of-sight to any other agent.
 
 	// (used by ActAgentMove::runTick() for debug-line drawing.  TODO: Perh. make this a property of the Action itself?)
 	IVideoDriver& getDriver() {	return *driver;	}// getDriver()
+
+	s32 getHP() const { return HitPoints;	}//
+	void setHP( const s32 hp ) {	HitPoints = hp;	}//
+	s32 getStr() const { return Strength;	}//
+	void setStr( const s32 str ) {	Strength = str;	}//
+	s32 getSpd() const { return Speed;	}//
+	void setSpd( const s32 spd ) {	Speed = spd;	}//
+	s32 getAcc() const { return Accuracy;	}//
+	void setAcc( const s32 acc ) {	Accuracy = acc;	}//
+
+	void Die();
+	void TakeDamage( const s32 damage );
+	actions::ActAgentAttack* const Attack( Agent& target );
 
 	//actions::ActAtkMelee* AttackMelee( Agent& target );
 	//ActAtkRanged* AttackRanged( Agent& target );
@@ -142,6 +169,8 @@ public:
 	bool MoveVector(vector3df distance);  //COLLISON MOVEMENT
 
 protected:
+	const actions::ITickAction* getCurrentAction() const;
+	actions::ITickAction* getCurrentAction();
 	void clearCurrentAction();
 	void setCurrentAction( actions::ITickAction* const newact );
 
@@ -175,6 +204,11 @@ private:
 	Agent* attackTarget;
 	bool hasMoveTarget;
 
+	s32 HitPoints;
+	s32 Strength;
+	s32 Speed;
+	s32 Accuracy;
+
 	// Ctor body utility function:
 	void AgentCtorImpl(stringw mesh, const vector3df& p);
 
@@ -187,6 +221,18 @@ private:
 // id=act, id=actions
 namespace actions
 {
+class ActAgentAttack : public ITickAction
+{
+public:
+	ActAgentAttack( Agent& attacker, Agent& targ );
+	virtual ~ActAgentAttack();
+	virtual bool runTick( const f32 frameDeltaTime );
+
+private:
+	Agent& attacker;
+	Agent& target;
+};// ActAgentAttack
+
 // id=act-agent-turn
 class ActAgentTurn : public ITickAction
 {
@@ -467,15 +513,17 @@ actions::ActionSequence* Agent::visitWaypoints( const TWaypointsList& pointsList
 }// visitWaypoints()
 
 template <typename TAgentsList>
-vector<Agent*> Agent::getVisibleAgents( TAgentsList& allAgents )
+vector<Agent*> Agent::getVisibleAgents( TAgentsList& allAgents, bool countIfDead )
 //vector<Agent*> Agent::getVisibleAgents( typename TAgentsList::iterator it, const typename TAgentsList::iterator end )
 {
 	vector<Agent*> visAgents;
 
 	for( typename TAgentsList::iterator it = allAgents.begin(); it != allAgents.end(); ++it )
 	{
-		if( (*this != *it) && getLineOfSightExists( *this, *it ) )
-		{	visAgents.push_back(&*it);	}// if
+		if( 	*this != *it &&  
+			( countIfDead || !it->isDead() ) && 
+			getLineOfSightExists( *this, *it )
+		  ){	visAgents.push_back(&*it);	}// if
 	}// for
 
 	return visAgents;

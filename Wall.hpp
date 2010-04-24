@@ -42,7 +42,7 @@ class Wall
       std::list<vector3df> AStar(vector3df start, vector3df goal, s32 smooth, bool debug = false);
       bool PathIsWide(vector3df from, vector3df to);
       bool operator== (const Wall& rhs) const;
-
+      vector3df getRandomNodePosition(); // Returns the coords for a random node in the graph.
    private:
       void addNode(u32 size, vector3df position); //creates a cube of size and places it at position
       void ExpandSpace(vector3df a);
