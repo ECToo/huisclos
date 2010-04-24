@@ -19,6 +19,7 @@ bool Wall::wall_exists = false;
 
 Wall::Wall(IrrlichtDevice* d, stringw t, u32 ds) : device(d), texture(t), dsize(ds)
 {
+   dpr("Wall ctor.");
    if(wall_exists)
    {  throw WallException("ERROR: Only one cj::Wall can exist!");  }
    driver = device->getVideoDriver();
@@ -27,9 +28,19 @@ Wall::Wall(IrrlichtDevice* d, stringw t, u32 ds) : device(d), texture(t), dsize(
    wall_exists = true;
 }
 
+Wall::Wall(const Wall& other)
+{
+   throw WallException("ERROR: Only one cj::Wall can exist! Don't use the copy constructor for Singleton classes!");
+}
+
+Wall Wall::operator= (const Wall& rhs) const
+{
+   throw WallException("ERROR: Only one cj::Wall can exist! Don't use the assignment for Singleton classes!");
+}
+
 Wall::~Wall()
 {
-//dpr("Wall dtor.");
+dpr("Wall dtor.");
    vector<GraphNode*>::iterator it = paths.begin();
    for(;it != paths.end(); ++it)
    {  delete *it;  }
@@ -175,7 +186,6 @@ void Wall::ExpandSpace(vector3df a)
 
 void Wall::InsertPath(s32 x, s32 z)
 {
-dpr( "InsertPath()" );
    vector<GraphNode*>::iterator it = paths.begin();
    for(; it != paths.end(); ++it)
    {
@@ -218,7 +228,6 @@ dpr( "InsertPath()" );
       }
 
       paths.insert(it, newnode);
-dpr( "Node count: " << paths.size() );
    }
 }
 
