@@ -31,6 +31,17 @@ struct GraphNode
 
 const f32 SQRT2 = sqrt(2);
 
+class WallException
+{
+   public:
+      WallException(const char *msg);
+      ~WallException();
+      const char *Message(void) const;
+
+   private:
+      const char *description;
+};
+
 class Wall
 {
    public:
@@ -63,6 +74,7 @@ class Wall
       s32 zneg;
       s32 zrange;
       s32 dsize;
+      static bool wall_exists;
 };
 
 }
