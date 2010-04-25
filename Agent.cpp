@@ -26,6 +26,7 @@ Agent::Agent(IrrlichtDevice* d, stringw mesh, stringw t, stringw h, vector3df p)
     body->setMaterialTexture(0, driver->getTexture(texture));
     //place the agent in the world
     body->setPosition(p);
+    body->setRotation(vector3df(0,180,0));
     //default sensor settings
     resolution = 7;
     awareness = 360;
@@ -453,7 +454,7 @@ void Agent::Act(void)
 
 void Agent::Seek(vector3df goal, Wall *w, bool track)
 {
-   route = w->AStar(body->getPosition(), goal, 2, track);
+   route = w->AStar(body->getPosition(), goal, 2, true);
    route.push_back(goal);
    if(track)  //only track the goal passed in from game
    {  clock_gettime(CLOCK_REALTIME, &gstart);  }

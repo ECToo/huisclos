@@ -60,9 +60,11 @@ void Game::Init(void)
    smgr->addCameraSceneNode(0, vector3df(0,200,0), vector3df(0,0,0));
    wall = new Wall(device, "t351sml.jpg");
    wall->makeWall(1,20,vector3df(0,0,20));
-   wall->makeWall(1,15,vector3df(20,0,20));
+   wall->makeWall(1,20,vector3df(20,0,-20));
    wall->makeWall(1,20,vector3df(70,0,50));
    wall->makeWall(10,1,vector3df(0,0,-20));
+   wall->makeWall(5,1,vector3df(-40,0,-60));
+   wall->makeWall(5,1,vector3df(-10,0,-80));
    wall->makeWall(1,20,vector3df(-70,0,50));
    population = 1;
    gen_gap = 20;
@@ -144,7 +146,7 @@ void Game::Run(void)
       //agents[4]->Seek(vector3df(-50,0,-50), wall, false);
       //agents[5]->Seek(vector3df(-50,0,-50), wall, false);
       //Tick();
-      //wall->DrawNodes();
+      wall->DrawNodes();
       smgr->drawAll();
       driver->endScene();
    }
