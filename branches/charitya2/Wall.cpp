@@ -3,11 +3,6 @@
 namespace cj
 {
 
-void printpoint(vector3df p)
-{
-   cout << "(" << p.X << " " << p.Z << ")\n";
-}
-
 Wall::Wall(IrrlichtDevice* d, stringw t, u32 ds) : device(d), texture(t), dsize(ds)
 {
     driver = device->getVideoDriver();
@@ -21,6 +16,9 @@ Wall::~Wall()
    for(;it != paths.end(); ++it)
    {  delete *it;  }
 }
+
+bool Wall::operator== (const Wall& rhs) const
+{	return &rhs == this;	}// ==()
 
 void Wall::addNode(u32 size, vector3df position)
 // creates a cube of size and places it at position
