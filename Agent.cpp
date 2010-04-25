@@ -74,7 +74,7 @@ void Agent::AgentCtorImpl(stringw mesh, const vector3df& p)
     //turn lighting off since we do not have a light source
     body->setMaterialFlag(EMF_LIGHTING, false);
     //default stand animation
-    body->setMD2Animation(scene::EMAT_STAND);
+    animationStand();
     //texture for the agent
     body->setMaterialTexture(0, driver->getTexture(texture));
     //place the agent in the world
@@ -432,6 +432,22 @@ actions::ActAgentAttack* const Agent::Attack( Agent& target )
 	setCurrentAction(newact);
 	return newact;
 }// Attack()
+
+
+
+void Agent::animationStand()
+{     getBody().setMD2Animation(scene::EMAT_STAND);	}//  Agent::animationStand()
+
+void Agent::animationAttack()
+{     getBody().setMD2Animation(scene::EMAT_ATTACK);	}//  Agent::animationAttack()
+
+void Agent::animationDie()
+{     getBody().setMD2Animation(scene::EMAT_DEATH_FALLFORWARD);	}//
+
+void Agent::animationRun()
+{     getBody().setMD2Animation(scene::EMAT_RUN);	}//
+
+// id=charity
 // <TAG> CA - NOTE: Do not add functions to Agent beyond this line.
 // This will be my section.
 

@@ -165,10 +165,16 @@ public:
 	//actions::ActAtkMelee* AttackMelee( Agent& target );
 	//ActAtkRanged* AttackRanged( Agent& target );
 
+
+	// Animation adjustment:
+	virtual void animationStand();
+	virtual void animationAttack();
+	virtual void animationRun();
+	virtual void animationDie();
+
 	// <TAG> CA - NOTE: Do not add public functions to Agent beyond this line.
 	// This will be my section.
 	bool MoveVector(vector3df distance);  //COLLISON MOVEMENT
-
 protected:
 	const actions::ITickAction* getCurrentAction() const;
 	actions::ITickAction* getCurrentAction();
