@@ -834,7 +834,8 @@ void Game::doTickKeyboardIO()
 //wcout << "Agent moving." << std::endl;
 			//************* MOVEMENT
 			// Decouple FPS from movement:
-			const f32 frameDeltaTime = static_cast<f32>(curTick - prevTick) / 1000.00; // Time in seconds
+			const u32 frameDeltaTime_ms = curTick - prevTick;
+			const f32 frameDeltaTime = static_cast<f32>(frameDeltaTime_ms) / 1000.00; // Time in seconds
 
 			vector3df translation;
 			f32 rotation = 0.00;

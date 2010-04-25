@@ -39,9 +39,9 @@ dpr( "Agent " << attacker.getID() << " attacks Agent " << target.getID() );
 // ACT-AGENT-SEEK-POS
 ActAgentSeekPosition::ActAgentSeekPosition( Agent& agt, const vector3df& dest, f32 spd ): agent(agt), destination(dest), speed(spd)
 {
+	// FIXME: 
 	agent.setHasMoveTarget( true );
 
-	// FIXME: : DON'T Set agent heading here.   agent.setRotation( ... );
 	agent.animationRun();
 }// ctor
 
@@ -62,6 +62,8 @@ bool ActAgentSeekPosition::runTick( const f32 frameDeltaTime )
 	// TODO: Optional:
 	//agent.getDriver().draw3DLine( agent.getPosition().toIrr_vector3df(), dist.to_absVec(*agent.getBody().getParent()).toIrr_vector3df() );
 
+	// TODO: : DON'T Set agent heading here.   agent.setRotation( ... );
+	agent.getBody().setRotation( (destination -  agent.getBody().getAbsolutePosition()).getHorizontalAngle() + vector3df(0,-90.00,0) );
 	agent.getBody().setPosition( agent.getBody().getPosition() + distVec );
 	agent.getBody().updateAbsolutePosition();
 
