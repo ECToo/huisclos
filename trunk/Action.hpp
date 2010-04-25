@@ -53,6 +53,8 @@ namespace cj
 			virtual ~ActionSequence() {}
 			virtual bool operator==(const ActionSequence& rhs) const {	return this==&rhs;	}
 
+			using  boost::ptr_deque<ITickAction>::push_back;
+
 			virtual bool runTick( f32 frameDelta )
 			{
 				if( !empty() )
@@ -69,50 +71,6 @@ namespace cj
 				return( empty() );
 			}// runTick()
 		};// ActionSequence
-
-
-
-		//class ActionsList : public boost::noncopyable, private boost::ptr_list<ITickAction>
-		//{
-		//public:
-			//ActionsList(IrrlichtDevice& dev): device(dev), curTick(0), prevTick(0) {}
-			//virtual ~ActionsList() {}
-
-			//virtual void queueAction( ITickAction* const action )
-			//{
-				//// (It should not be in the list:)
-				//assert( find( begin(), end(), *action ) == end() );
-				//push_back(action);
-				//// (It should now be in the list:)
-				//assert( find( begin(), end(), *action ) != end() );
-			//}// queueAction()
-
-			//void runTick()
-			//{
-				//prevTick = curTick;
-				//curTick = device.getTimer()->getTime();
-				//const f32 frameDeltaTime = static_cast<f32>(curTick - prevTick) / 1000.f; // Time in seconds
-
-				//iterator it = begin();
-				//while( it != end() )
-				////for( iterator it = begin(); it != end(); ++it )
-				//{
-					//const bool finished = it->runTick( frameDeltaTime );
-					//if( finished )
-					//{
-						//// FIXME: Is the iterator borked?
-						//it = erase(it);
-					//}// if
-					//else
-					//{	++it;	}// else
-				//}// while
-			//}// runTick()
-
-		//private:
-			//IrrlichtDevice& device;
-			//u32 curTick;
-			//u32 prevTick;
-		//};// ActionsList
 
 		class ActionsList : public boost::noncopyable, private boost::ptr_list<ITickAction>
 		{
@@ -142,13 +100,6 @@ namespace cj
 					const bool finished = it->runTick( frameDeltaTime );
 					if( finished )
 					{
-						// FIXME:
-						// If the action is intended to "chain," load the next action.
-						//if( it->getNextAction() != NULL )
-						//{
-							//insert( it, it->getNextAction() );
-						//}// if
-						// FIXME: Is the iterator borked after an erase() call?
 						it = erase(it);
 					}// if
 					else

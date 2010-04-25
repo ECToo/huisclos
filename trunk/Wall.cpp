@@ -28,15 +28,15 @@ Wall::Wall(IrrlichtDevice* d, stringw t, u32 ds) : device(d), texture(t), dsize(
    wall_exists = true;
 }
 
-Wall::Wall(const Wall& other)
-{
-   throw WallException("ERROR: Only one cj::Wall can exist! Don't use the copy constructor for Singleton classes!");
-}
+//Wall::Wall(const Wall& other)
+//{
+   //throw WallException("ERROR: Only one cj::Wall can exist! Don't use the copy constructor for Singleton classes!");
+//}
 
-Wall Wall::operator= (const Wall& rhs) const
-{
-   throw WallException("ERROR: Only one cj::Wall can exist! Don't use the assignment for Singleton classes!");
-}
+//Wall Wall::operator= (const Wall& rhs) const
+//{
+   //throw WallException("ERROR: Only one cj::Wall can exist! Don't use the assignment for Singleton classes!");
+//}
 
 Wall::~Wall()
 {
