@@ -722,6 +722,7 @@ dpr( "Setting GUI visibility to " << !getGUIVisible() );
 				//{	release = false;	}
 //dpr("Tick");
 				// Calculate time-slicing:
+				// id=time
 				prevTick = curTick;
 				curTick = device().getTimer()->getTime();
 				static const SColor initColors(255,120,102,136); // TODO: Allow parameterization--if I ever know exactly what these parameters do.
@@ -954,6 +955,7 @@ void Game::doTickAgentsActions()
 			// id=FSM tick:
 			if( it->getState() == Agent::DEAD )
 			{
+				it->animationDie();
 				// TODO: Play dead.
 			}// if
 			else

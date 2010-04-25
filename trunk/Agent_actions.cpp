@@ -11,7 +11,7 @@ ActAgentAttack::ActAgentAttack( Agent& atk, Agent& targ )
 : attacker(atk), target(targ)
 {
 	attacker.setAttackTarget(&target);
-	//TODO: Attack animation
+	attacker.animationAttack();
 }// ctor
 
 ActAgentAttack::~ActAgentAttack()
@@ -40,9 +40,9 @@ dpr( "Agent " << attacker.getID() << " attacks Agent " << target.getID() );
 ActAgentSeekPosition::ActAgentSeekPosition( Agent& agt, const vector3df& dest, f32 spd ): agent(agt), destination(dest), speed(spd)
 {
 	agent.setHasMoveTarget( true );
-	
-	// TODO: Set agent heading here.  agent.setRotation( ... );
-	// TODO: Play movement animation
+
+	// FIXME: : DON'T Set agent heading here.   agent.setRotation( ... );
+	agent.animationRun();
 }// ctor
 
 ActAgentSeekPosition::~ActAgentSeekPosition() {}
