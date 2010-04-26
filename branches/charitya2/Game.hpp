@@ -42,20 +42,13 @@ class Game
       IGUIEnvironment* guienv;
       vector<Agent*> agents;
       timespec gstart;  //game start time
-      u32 gen_gap;  //time a population is evaluated in seconds
       u32 population;  //population size
-      u16 generation;  //generation counter
       vector3df startvector;  //agents start at this location
-      vector<u32> totscores;  //total scores
-      ofstream myfile;
       Wall* wall;
 
       void Init(void);  // Initialize game
       void Run(void);  // Run game
       void Tick(void);  // process tick
-      void NewGeneration(void);  //create new generation
-      AIBrain GetParent(vector<u32> scores, u32 bestscore);  //determine parent
-      void CrossOver(AIBrain *mom, AIBrain *dad);  //determine crossover
 };
 
 }

@@ -10,7 +10,7 @@ s32 Agent::genID()
 {  return ++nextAvailableID;  }
 
 Agent::Agent(IrrlichtDevice* d, stringw mesh, stringw t, stringw h, vector3df p)
- : device(d), path(h), texture(t), wheel(360,80,100)
+ : device(d), path(h), texture(t), wheel(50,5000,50,600)
 {
     //initialize naming short cuts
     driver = device->getVideoDriver();
@@ -21,12 +21,12 @@ Agent::Agent(IrrlichtDevice* d, stringw mesh, stringw t, stringw h, vector3df p)
     //turn lighting off since we do not have a light source
     body->setMaterialFlag(EMF_LIGHTING, false);
     //default stand animation
-    body->setMD2Animation(scene::EMAT_STAND);
+    body->setMD2Animation(EMAT_STAND);
     //texture for the agent
     body->setMaterialTexture(0, driver->getTexture(texture));
     //place the agent in the world
     body->setPosition(p);
-    body->setRotation(vector3df(0,180,0));
+    body->setRotation(vector3df(0,0,0));
     //default sensor settings
     resolution = 7;
     awareness = 360;
@@ -39,57 +39,13 @@ Agent::Agent(IrrlichtDevice* d, stringw mesh, stringw t, stringw h, vector3df p)
     //circle is not drawn unless needed, so make it invisible
     circle->setVisible(false);
     body->updateAbsolutePosition();
-    won = false;
     remove = true;
-    stuck = 0;
-}
-
-Agent::Agent(IrrlichtDevice* d, stringw mesh, stringw t, stringw h, vector3df p, AIBrain b)
- : device(d), path(h), texture(t), wheel(360,80,100), brain(b)
-{
-    //initialize naming short cuts
-    driver = device->getVideoDriver();
-    smgr = device->getSceneManager();
-    cmgr = smgr->getSceneCollisionManager();
-    //add the scene node to the scene manager
-    body = smgr->addAnimatedMeshSceneNode(smgr->getMesh(mesh), 0, genID() );// NB: genID() arg added to keep agents' IDs from all being '-1'.
-    //turn lighting off since we do not have a light source
-    body->setMaterialFlag(EMF_LIGHTING, false);
-    //default stand animation
-    body->setMD2Animation(scene::EMAT_STAND);
-    //texture for the agent
-    //body->setMaterialTexture(0, driver->getTexture(texture));
-    //place the agent in the world
-    body->setPosition(p);
-    //default sensor settings
-    resolution = 7;
-    awareness = 360;
-    range = 50;
-    //create the sensing circle and adjust the lighting and texture
-    circle = smgr->addBillboardSceneNode(body, dimension2df(range*2,range*2));
-    circle->setMaterialType(EMT_TRANSPARENT_ALPHA_CHANNEL);
-    circle->setMaterialFlag(EMF_LIGHTING, false);
-    circle->setMaterialTexture(0, driver->getTexture(path + "circle.png"));
-    //circle is not drawn unless needed, so make it invisible
-    circle->setVisible(false);
-    body->updateAbsolutePosition();
-    won = false;
-    remove = true;
-    stuck = 0;
 }
 
 Agent::~Agent()
 {
    if(remove)
    {  body->remove();  }
-}
-
-void Agent::Reset(vector3df p, AIBrain b)
-{
-   body->setPosition(p);
-   body->updateAbsolutePosition();
-   won = false;
-   route.clear();
 }
 
 IAnimatedMeshSceneNode* Agent::getBody(void)
@@ -319,7 +275,7 @@ vector<f32> Agent::MoveVector(vector3df distance)
     u32 old_resolution = resolution;
     // to speed up collision detection and make sure we detect from all angles
     awareness = 360;
-    range = 7;
+    range = 5;
     resolution = 7;
     // record success or failure of movement
     bool moved = false;
@@ -383,138 +339,37 @@ vector<f32> Agent::MoveVector(vector3df distance)
 
 void Agent::Update(void)
 {
-   vector<f32> feelers = Sense();
-   Think(feelers);
-   Act();
-}
-
-vector<f32> Agent::Sense(void)
-{
-   return DrawFeelers(false);
-}
-
-void Agent::Think(vector<f32> feelers)
-{
-   matrix4 bodytrans = body->getAbsoluteTransformation();
-
    if(wheel.HasGoal())
-   {  //we haven't found the goal yet
-      //input for brain is the 5 feelers scaled by range to be a value 0 to 1
-      for(u16 i = 0; i < feelers.size(); i++)
-      {  feelers[i] /= (range-5);  }
-      //next input for brain is the normal vector to the target
-      vector3df goalnorm = wheel.GetGoal() - bodytrans.getTranslation();
-      goalnorm.normalize();
-      feelers.push_back(goalnorm.X);
-      feelers.push_back(goalnorm.Z);
-      //get the output
-      vector<f64> output = brain.ChangeGoal(feelers);
-
-      //the last output is whether or not to create a subgoal
-      if(output.back() > 0.5 || stuck > 0)
-      {  //make sure we keep the original goal
-         if(route.empty())
-         {  route.push_back(wheel.GetGoal());  }
-         s32 sign = 1;
-         if(stuck > 0)
-         {  sign = -1;  }
-         //new goal in a direction determined by output
-         wheel.SetGoal(vector3df(range/2 - sign*range*output.at(0), 0, range/2 - sign*range*output.at(1)));
-      }
-
-      //calculate next step to goal or subgoal
-      wheel.NextStep(bodytrans);
+   {
+      //Set rotation and attempt to move to position (checks for collisions)
+      f32 newangle = body->getRotation().Y + wheel.GetRotation().Y;
+      if(newangle > 360)
+      {  newangle -= 360;  }
+      else if(newangle < -360)
+      {  newangle += 360;  }
+      body->setRotation(vector3df(0,newangle,0));
+      body->updateAbsolutePosition();
+      MoveVector(wheel.GetStep());
+      wheel.NextStep(body->getPosition(), body->getRotation().Y);
    }
    else if(!route.empty())
    {  //we found the subgoal, back to the original goal
       wheel.SetGoal(route.front());
       route.erase(route.begin());
-      wheel.NextStep(bodytrans);;
-   }
-   else if(!won)
-   {  //we found the original goal, update end clock time if not done
-      won = true;
-      stuck = 0;
-      clock_gettime(CLOCK_REALTIME, &gend);
-   }
-}
-
-void Agent::Act(void)
-{
-   if(wheel.HasGoal())
-   {
-      //Set rotation and attempt to move to position (checks for collisions)
-      body->setRotation(body->getRotation() + wheel.GetRotation());
-      if(!MoveVector(wheel.GetStep()).empty())
-      {  stuck = 0;  }
-      else
-      {  stuck++;  }
+      wheel.NextStep(body->getPosition(), body->getRotation().Y);
    }
 }
 
 void Agent::Seek(vector3df goal, Wall *w, bool track)
 {
    route = w->AStar(body->getPosition(), goal, 2, true);
-   route.push_back(goal);
    if(track)  //only track the goal passed in from game
    {  clock_gettime(CLOCK_REALTIME, &gstart);  }
-   stuck = 0;
-}
-
-u32 Agent::GetFitness(vector3df goal, vector3df startpos)
-{
-   u32 fitness = 0;
-
-   if(won)
-   {  //this individual found the goal for this start vector
-      f64 interval = (gend.tv_sec - gstart.tv_sec) + ((gend.tv_nsec - gstart.tv_nsec)/1000000000.00);
-      fitness = 5000 - interval * 3;
-   }
-   else
-   {  //did not find the goal
-      fitness = 1000 - (goal - body->getAbsoluteTransformation().getTranslation()).getLength()
-         + (startpos - body->getAbsoluteTransformation().getTranslation()).getLength();
-      fitness /= (stuck + 1);
-   }
-
-   return fitness;
 }
 
 void Agent::GameOver(void)
 {
    remove = false;
-}
-
-AIBrain Agent::GetBrain(void)
-{  return brain;  }
-
-void Agent::SmartNavigate(void)
-{
-   matrix4 bodytrans = body->getAbsoluteTransformation();
-   if(wheel.HasGoal())
-   {
-       //Set rotation and attempt to move to position (checks for collisions)
-      cout << "current: " << body->getRotation().Y << " change: " << wheel.GetRotation().Y << endl;
-      f32 newangle = body->getRotation().Y + wheel.GetRotation().Y;
-      if(newangle > 360)
-      {  newangle -= 360;  }
-      body->setRotation(vector3df(0,newangle,0));
-
-      //if(!MoveVector(wheel.GetStep()).empty())
-      //{
-         //make sure we keep the original goal
-         //if(route.empty())
-         //{  route.push_back(wheel.GetGoal());  }
-
-      //}
-      wheel.NextStep(bodytrans);
-   }
-   else if(!route.empty())
-   {  //we found the subgoal, back to the original goal
-      wheel.SetGoal(route.front());
-      route.erase(route.begin());
-      wheel.NextStep(bodytrans);;
-   }
 }
 
 }
