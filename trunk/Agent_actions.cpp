@@ -19,7 +19,7 @@ ActAgentAttack::~ActAgentAttack()
 	attacker.setAttackTarget( NULL );
 }// dtor
 
-bool ActAgentAttack::runTick( const f32 frameDeltaTime )
+bool ActAgentAttack::runTick( const f32 deltaTime )
 {
 
 dpr( "Agent " << attacker.getID() << " attacks Agent " << target.getID() );
@@ -47,11 +47,11 @@ ActAgentSeekPosition::ActAgentSeekPosition( Agent& agt, const vector3df& dest, f
 
 ActAgentSeekPosition::~ActAgentSeekPosition() {}
 
-bool ActAgentSeekPosition::runTick( const f32 frameDeltaTime )
+bool ActAgentSeekPosition::runTick( const f32 deltaTime )
 {
 //dpr("ActAgentMove tick to " << destination);
 	vector3df remaining = destination - agent.getBody().getAbsolutePosition();
-	f32 dist = frameDeltaTime * speed;
+	f32 dist = deltaTime * speed;
 	if( dist >= remaining.getLength() )
 	{ 	dist = remaining.getLength(); 	}// if
 
@@ -69,7 +69,7 @@ bool ActAgentSeekPosition::runTick( const f32 frameDeltaTime )
 
 	if( agent.getBody().getAbsolutePosition() == destination )
 	{
-//dpr("Arrived at " << destination);
+dpr("Arrived at " << destination);
 		//waypoint.setFancyGraphic(false);
 		agent.setHasMoveTarget( false );
 		return true;
