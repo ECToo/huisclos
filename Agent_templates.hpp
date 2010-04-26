@@ -182,6 +182,9 @@ actions::ActionSequence* Agent::visitWaypoints( const TWaypointsList& pointsList
 	assert( act->size() == pointsList.size() );
 
 	setCurrentAction(act);
+	// TODO: Move into Action:
+	setHasMoveTarget( true );
+	animationRun();
 
 	return act;
 }// visitWaypoints()

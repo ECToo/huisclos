@@ -10,8 +10,8 @@ namespace actions
 ActAgentAttack::ActAgentAttack( Agent& atk, Agent& targ )
 : attacker(atk), target(targ)
 {
-	attacker.setAttackTarget(&target);
-	attacker.animationAttack();
+	//attacker.setAttackTarget(&target);
+	//attacker.animationAttack();
 }// ctor
 
 ActAgentAttack::~ActAgentAttack()
@@ -39,9 +39,7 @@ dpr( "Agent " << attacker.getID() << " attacks Agent " << target.getID() );
 // ACT-AGENT-SEEK-POS
 ActAgentSeekPosition::ActAgentSeekPosition( Agent& agt, const vector3df& dest, f32 spd ): agent(agt), destination(dest), speed(spd)
 {
-	// FIXME: 
-	agent.setHasMoveTarget( true );
-
+	//agent.setHasMoveTarget( true );
 	agent.animationRun();
 }// ctor
 

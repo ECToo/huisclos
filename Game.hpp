@@ -258,5 +258,5 @@ namespace cj
 	};// Game
 }// cj
 
-#endif // guard
+#endif // inc
 

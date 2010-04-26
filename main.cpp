@@ -47,13 +47,16 @@ int main()
    wall.makeWall(5,1,vector3df(-10,0,-80));
    wall.makeWall(1,20,vector3df(-70,0,50));
 
-	Agent& pc = game.addAgent( vector3df(0,0,90) );
-	game.setPC( pc );
+	//Agent& pc = game.addAgent( vector3df(0,0,90) );
+	//game.setPC( pc );
 
 	Agent& faerie = game.addAgent( vector3df(0,0,100) );
+	faerie.setState( Agent::ATTACK );
 
-	//faerie.setState( Agent::ATTACK );
-	faerie.Seek(vector3df(-50,0,-50), wall);
+	game.addAgent( vector3df(0,0,100) ).setState( Agent::ATTACK );
+	game.addAgent( vector3df(-100,0,-100) ).setState( Agent::ATTACK );
+		//game.addAgent( vector3df(60,0,100) ).setState( Agent::ATTACK );
+	//faerie.Seek(vector3df(-50,0,-50), wall);
 
 	//faerie.Goto( vector3df(30,0,0), 30 );
       //agents[0]->Seek(vector3df(-50,0,-50), wall, true);

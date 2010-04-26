@@ -1,6 +1,7 @@
 #include "Wall.hpp"
 #include "IO.hpp"
 #include "assert_swig.hpp"
+#include <cstdlib>
 
 namespace cj
 {
@@ -52,11 +53,19 @@ bool Wall::operator== (const Wall& rhs) const
 
 vector3df Wall::getRandomNodePosition()
 {
-dpr( "Picking random node." );
-dpr( paths.size() );
 	assert( !paths.empty() );
-	u32 random = 0;/* TODO: : rand ∈ [0,paths.size()) */
-	return (paths.front() + random)->point;
+	vector3df chosen;
+	u32 random;
+       	do
+	{
+		random = rand() % paths.size();
+		//chosen = (paths.front() + random)->point;
+		chosen = (paths.at(random))->point;
+	} while( !NotWall(chosen) );
+
+dpr( "Randomly chose node " << random << " at " << chosen );
+	//return (paths.front() + random)->point;
+	return chosen;
 }// Wall::getRandomNodePosition()
 
 void Wall::addNode(u32 size, vector3df position)
