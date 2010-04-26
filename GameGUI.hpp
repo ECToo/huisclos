@@ -2,6 +2,7 @@
 #define __GAMEGUI_HPP__
 
 #include "boost/utility.hpp"
+//#include "boost/ptr_container/ptr_list.hpp"
 #include "boost/ptr_container/ptr_vector.hpp"
 #include <irrlicht.h>
 #include "Agent.hpp"
@@ -15,6 +16,7 @@ namespace cj
 	namespace gui {class GameGUI;}
 	class Agent;
 	typedef boost::ptr_vector<Agent> AgentsList;
+	//typedef boost::ptr_list<Agent> AgentsList;
 
 	namespace actions
 	{

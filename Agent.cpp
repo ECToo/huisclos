@@ -60,7 +60,11 @@ Agent::Agent(IrrlichtDevice* d, stringw mesh, stringw t, stringw h, const vector
 	HitPoints(HP),
 	Strength(Str),
 	Speed(Spd),
-	Accuracy(Acc)
+	Accuracy(Acc),
+	period( 0.05 ),
+	tickDeltaTime(period)
+	//period_ms( 1000 / 2 ),
+	//tickDeltaTime_ms(period_ms)
 { AgentCtorImpl(mesh, p); }// ctor
 
 void Agent::AgentCtorImpl(stringw mesh, const vector3df& p)
@@ -370,11 +374,24 @@ void Agent::doTickActions( f32 frameDeltaTime )
 	//{	it->runTick( frameDeltaTime );	}// for
 	if( getCurrentAction() )
 	{
-		const bool bDone = getCurrentAction()->runTick(frameDeltaTime);
-		if( bDone )
+		// TODO: If possible, use ints and ms--faster than floats
+		//tickDeltaTime_ms += frameDeltaTime_ms;
+		//if( tickDeltaTime_ms >= period_ms )
+		//{
+			//tickDeltaTime_ms = 0;
+		tickDeltaTime += frameDeltaTime;
+		if( tickDeltaTime >= period )
 		{
-			assert( getCurrentAction() );
-			clearCurrentAction();
+//dpr( "Running tick " << tickDeltaTime );
+			//const bool bDone = getCurrentAction()->runTick(frameDeltaTime);
+			const bool bDone = getCurrentAction()->runTick(tickDeltaTime);
+			if( bDone )
+			{
+				assert( getCurrentAction() );
+				clearCurrentAction();
+			}// if
+			else // restart wait for next tick
+			{ 	tickDeltaTime = 0.00; }// else
 		}// if
 	}// if
 }// doTickActions

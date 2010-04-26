@@ -14,7 +14,9 @@ class ActAgentAttack : public ITickAction
 public:
 	ActAgentAttack( Agent& attacker, Agent& targ );
 	virtual ~ActAgentAttack();
-	virtual bool runTick( const f32 frameDeltaTime );
+	//virtual void onStateBegin();
+	//virtual void onStateEnd();
+	virtual bool runTick( const f32 deltaTime );
 
 private:
 	Agent& attacker;
@@ -31,9 +33,9 @@ public:
 	// DTOR
 	virtual ~ActAgentTurn() {}
 
-	bool runTick( const f32 frameDeltaTime )
+	bool runTick( const f32 deltaTime )
 	{
-		relAngle angle( frameDeltaTime * speed );
+		relAngle angle( deltaTime * speed );
 
 		if( angle > totalAngle )
 		{	angle = totalAngle;	}// if
@@ -67,9 +69,9 @@ public:
 	// DTOR
 	virtual ~ActAgentMove() {}
 
-	bool runTick( const f32 frameDeltaTime )
+	bool runTick( const f32 deltaTime )
 	{
-		relVec dist( frameDeltaTime * speed );
+		relVec dist( deltaTime * speed );
 
 		// If we'd be going to far, scale back
 		if( dist.getLengthSQ() > totalDist.getLengthSQ() )
@@ -112,7 +114,7 @@ class ActAgentSeekPosition : public ITickAction
 public:
 	ActAgentSeekPosition( Agent& agt, const vector3df& dest, f32 spd );
 	virtual ~ActAgentSeekPosition();
-	virtual bool runTick( const f32 frameDeltaTime );
+	virtual bool runTick( const f32 deltaTime );
 private:
 	Agent& agent;
 	const vector3df destination;

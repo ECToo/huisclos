@@ -38,7 +38,8 @@ namespace actions
 }//
 
 // TODO: Change private to protected once subclass interface has been considered properly.
-class Agent : public boost::noncopyable, public sensor::SSensors
+// id=agent
+class Agent : public boost::noncopyable, public sensor::SSensors //, public IStateEntity
 {
 public:
 	static const f32 DEFAULT_GIRTH;
@@ -172,6 +173,10 @@ public:
 	virtual void animationRun();
 	virtual void animationDie();
 
+	//virtual void onStateBegin();
+	//virtual void onStateEnd();
+	//virtual bool onTick( u32 frameDeltaTime_ms );
+
 	// <TAG> CA - NOTE: Do not add public functions to Agent beyond this line.
 	// This will be my section.
 	bool MoveVector(vector3df distance);  //COLLISON MOVEMENT
@@ -215,6 +220,12 @@ private:
 	s32 Strength;
 	s32 Speed;
 	s32 Accuracy;
+
+	// Controlling the rate at which AI states are updated:
+	//u32 period_ms;
+	//u32 tickDeltaTime_ms;
+	f32 period;
+	f32 tickDeltaTime;
 
 	// Ctor body utility function:
 	void AgentCtorImpl(stringw mesh, const vector3df& p);

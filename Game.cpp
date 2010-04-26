@@ -996,8 +996,9 @@ dpr( "Agent " << it->getID() << " doing attack." );
 						{
 							if( !it->getHasMoveTarget() )
 							{
-//dpr( "Agent " << it->getID() << " wandering." );
+dpr( "Agent " << it->getID() << " wandering." );
 //dpr( walls().size() );
+
 								//it->Seek( wall().getRandomNodePosition(), wall() );
 								//assert( it->getHasMoveTarget() );
 
