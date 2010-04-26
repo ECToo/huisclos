@@ -13,7 +13,9 @@
 #include <sstream> // wostringstream
 #include <algorithm> // find()
 #include <iterator> // distance()
-#include <cassert> // theObvious()
+#include <cassert> // theObvious
+#include <cstdlib> // rand()
+#include <ctime> // time()
 
 
 
@@ -74,6 +76,8 @@ HUD(NULL),
 navgraph(NULL)
 {
 dpr( "* GAME CTOR" );
+	// id=time
+	srand(time(0));
 
 	if( irrInstance != NULL ) throw "** Error: Attempted 2nd instantiation of cj::Game, a singleton class.";
 
@@ -949,15 +953,18 @@ void Game::doTickKeyboardIO()
 // id=Agent
 void Game::doTickAgentsActions()
 {
+	static vector<Agent*> toDelete;
 	for( AgentsList::iterator it = agents().begin(); it != agents().end(); ++it )
 	{
+		toDelete.clear();
+
 		if( !getIsPCSet() || (getPC() != *it) )
 		{
 			// id=FSM tick:
 			if( it->getState() == Agent::DEAD )
 			{
-				it->animationDie();
-				// TODO: Play dead.
+				toDelete.push_back( &(*it) );
+				// TODO: Remove body; delete agent.  Note that deleting it *here* will void the iterator!
 			}// if
 			else
 			{
@@ -970,6 +977,7 @@ void Game::doTickAgentsActions()
 
 					if( it->getState() == Agent::ATTACK )
 					{
+						assert( !it->getHasMoveTarget() );
 						if( it->getAttackTarget() == NULL )//
 						{
 							if( agentsSeen.empty() ) // transition to MOVE.
@@ -980,8 +988,8 @@ dpr( "Agent " << it->getID() << " ATTACK -> MOVE." );
 							}// if
 							else // pick new target
 							{
-dpr( "Agent " << it->getID() << " doing attack." );
-								const u32 random = 0; //TODO: : rand ∈ [0,agentsSeen.size())
+								const u32 random = rand() % agentsSeen.size();
+dpr( "Agent " << it->getID() << " attacking visible Agent #" << random );
 								//it->getNearbyRandomEnemy()
 								it->Attack( *(agentsSeen.front() + random) );
 							}// else
@@ -998,17 +1006,17 @@ dpr( "Agent " << it->getID() << " doing attack." );
 							{
 dpr( "Agent " << it->getID() << " wandering." );
 //dpr( walls().size() );
-
-								//it->Seek( wall().getRandomNodePosition(), wall() );
-								//assert( it->getHasMoveTarget() );
-
+								it->Seek( wall().getRandomNodePosition(), wall() );
+								assert( it->getHasMoveTarget() );
 							}// if
 							// Continue to doTickActions()
 						}// if
 						else // transition to ATTACK.
 						{
 dpr( "Agent " << it->getID() << " MOVE -> ATTACK." );
-							it->setState( Agent::ATTACK ); }// else
+							it->setState( Agent::ATTACK ); 
+							it->setHasMoveTarget(false);
+						}// else
 					}// elif MOVE state
 					else
 					{	assert(false); /* Invalid state*/ }// else
@@ -1017,48 +1025,11 @@ dpr( "Agent " << it->getID() << " MOVE -> ATTACK." );
 				it->doTickActions(static_cast<f32>(curTick - prevTick) / 1000.f); // NEXT ACTION
 			}// elsif not dead
 		}// if not PC
+
+		for( vector<Agent*>::iterator it = toDelete.begin(); it != toDelete.end(); ++it )
+		{	removeAgent( **it );	}
 	}// for
 }// doTickAgentsActions()
-
-//// Handoff to GUI.
-//inline void Game::runAgentsOutputTick()
-//{
-	//gui().runAgentsListBoxTick();
-//}// runAgentsOutputTick()
-
-//// FIXME:
-//void Game::runSensorOutputTick()
-//{
-	//// TODO: sensorWindow accessors
-
-	//if( getIsPCSet() )
-	//{
-		//// FIXME:
-	//}// if
-//}// runSensorOutputTick()
-
-//// TODO: Put on heap; pass byref w/ a smart-ptr to avoid copying?
-//inline vector<f32> Game::drawFeelers()
-//{
-	//assert( getIsPCSet() );
-	//// FIXME: 'debug' parm
-	//return getPC().DrawFeelers( true );
-//}// drawFeelers()
-
-//inline vector<pointOfInterest> Game::drawCircle()
-//{
-	//assert( getIsPCSet() );
-	//// FIXME: 'debug' parm
-	//return getPC().DrawCircle( agents().begin(), agents().end(), true );
-//}// drawCircle()
-
-//inline vector<f32> Game::drawPieSlices()
-//{
-	//assert( getIsPCSet() );
-	//// FIXME: 'debug' parm
-	//return getPC().DrawPieSlices( agents().begin(), agents().end(), true );
-//}// drawPieSlices()
-
 
 // Template spec for handling GUI buttons:
 template <>

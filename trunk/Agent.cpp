@@ -347,6 +347,9 @@ actions::ActAgentSeekPosition* const Agent::Goto( const vector3df& dest, f32 spe
 	actions::ActAgentSeekPosition* newact = new actions::ActAgentSeekPosition(*this, dest, speed );
 	assert(newact);
 	setCurrentAction(newact);
+	// TODO: Move into Action:
+	setHasMoveTarget( true );
+	animationRun();
 	return newact;
 }// Goto()
 
@@ -419,7 +422,7 @@ void Agent::Die()
 	clearAllActions();
 	setState( Agent::DEAD );
 dpr("NPC " << getID() << " died.");
-	// TODO: play death animation
+	// TODO: Die action, w/ animation
 }// Die()
 
 void Agent::TakeDamage( const s32 damage )
@@ -447,6 +450,10 @@ actions::ActAgentAttack* const Agent::Attack( Agent& target )
 	actions::ActAgentAttack* newact = new actions::ActAgentAttack(*this, target);
 	assert(newact);
 	setCurrentAction(newact);
+
+	// TODO: Move into Action body:
+	setAttackTarget(&target);
+	animationAttack();
 	return newact;
 }// Attack()
 
