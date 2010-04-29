@@ -41,8 +41,25 @@ void WanderState::resetWander()
 		//delete wander;
 	//}// if
 	agent.clearCurrentAction();
-	wander = agent.Seek( Wall::Instance().getRandomNodePosition() ) ;
-	//wander = agent.Seek( Wall::Instance().getRandomNodePosition() ) ;
+
+	// Find a *valid* node to wander to:
+	bool fail;
+	do
+	{
+		try
+		{
+			fail = false;
+			wander = agent.Seek( Wall::Instance().getRandomNodePosition(), static_cast<f32>(agent.getSpd()) ) ;
+		}// try
+		catch(PathfindException e)
+		{
+dpr( "Agent " << agent.getID() << " failed pathfind.  Retrying." );
+			fail = true;
+		}
+	} while(fail);
+
+dpr( "Agent " << agent.getID() << " began Wander circuit." );
+//dpr( "Agent " << agent.getID() << " randomly chose node " << random << " at " << chosen );
 }// resetWander()
 
 void WanderState::runTick( f32 deltaTime )

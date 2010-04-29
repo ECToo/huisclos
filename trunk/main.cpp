@@ -7,6 +7,7 @@
 #include "Agent.hpp"
 #include "Wall.hpp"
 #include "Coordinates.hpp"
+#include "Fairy.hpp"
 using namespace cj;
 
 using namespace std;
@@ -47,6 +48,8 @@ int main()
    wall.makeWall(5,1,vector3df(-10,0,-80));
    wall.makeWall(1,20,vector3df(-70,0,50));
 
+   	Fairy::DEFAULT_SPEED = 400;
+
 	Agent& pc = game.addAgent( vector3df(0,0,90) );
 	game.setPC( pc );
 
@@ -55,8 +58,10 @@ int main()
 	//faerie.Seek(vector3df(-50,0,-50), 100);
 	faerie.setState( faerie.Wander );
 
-	game.addAgent( vector3df(0,0,100) );//.setState( Agent::ATTACK );
-	game.addAgent( vector3df(-100,0,-100) );//.setState( Agent::ATTACK );
+	Agent& f2 = game.addAgent( vector3df(0,0,100) );
+		f2.setState( f2.Wander );
+	Agent& f3 = game.addAgent( vector3df(-100,0,-100) );
+		f3.setState( f3.Wander );
 		//game.addAgent( vector3df(60,0,100) ).setState( Agent::ATTACK );
 #ifndef SWIG
 	game.start();

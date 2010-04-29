@@ -48,7 +48,9 @@ public:
 	IAction(): hasStarted(false)
 	{}
 	virtual ~IAction()
-	{	assert( started() );	}
+	{	
+		//assert( started() );	
+	}// d
 	virtual void start()
 	{	
 		assert( !started() );
