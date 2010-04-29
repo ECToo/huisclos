@@ -48,7 +48,9 @@ int main()
    wall.makeWall(5,1,vector3df(-10,0,-80));
    wall.makeWall(1,20,vector3df(-70,0,50));
 
+   	// <Config>
    	Fairy::DEFAULT_SPEED = 400;
+   	Fairy::DEFAULT_ATTACK_MULTIPLIER = 10;
 
 	Agent& pc = game.addAgent( vector3df(0,0,90) );
 	game.setPC( pc );
@@ -60,10 +62,10 @@ int main()
 	//faerie.setState( faerie.Dead );
 	faerie.setState( faerie.Fight );
 
-	//Agent& f2 = game.addAgent( vector3df(0,0,100) );
-		//f2.setState( f2.Wander );
+	Agent& f2 = game.addAgent( vector3df(0,0,100) );
+		f2.setState( f2.Wander );
 	Agent& f3 = game.addAgent( vector3df(-100,0,-100) );
-		//f3.setState( f3.Wander );
+		f3.setState( f3.Wander );
 		//game.addAgent( vector3df(60,0,100) ).setState( Agent::ATTACK );
 #ifndef SWIG
 	game.start();

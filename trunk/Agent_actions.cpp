@@ -59,7 +59,7 @@ dpr("Arrived at " << destination);
 
 // id=ATTACK
 AttackAction::AttackAction( Agent& atk, Agent& targ )
-: Timed(10), attacker(atk), target(targ)
+: Timed( f32(atk.getAttackMultiplier()) ), attacker(atk), target(targ)
 {}// ctor
 
 AttackAction::~AttackAction()
