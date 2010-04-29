@@ -51,37 +51,13 @@ int main()
 	game.setPC( pc );
 
 	Agent& faerie = game.addAgent( vector3df(0,0,100) );
-	//faerie.MoveTo( vector3df(60,0,0), 50 );
-	//faerie.setState( Agent::ATTACK );
+	//faerie.MoveTo( vector3df(60,0,90), 50 );
+	//faerie.Seek(vector3df(-50,0,-50), 100);
 	faerie.setState( faerie.Wander );
-
-
 
 	game.addAgent( vector3df(0,0,100) );//.setState( Agent::ATTACK );
 	game.addAgent( vector3df(-100,0,-100) );//.setState( Agent::ATTACK );
 		//game.addAgent( vector3df(60,0,100) ).setState( Agent::ATTACK );
-	//faerie.Seek(vector3df(-50,0,-50), 400);
-	//faerie.Seek(vector3df(-50,0,-50), wall, 400);
-
-	//faerie.Goto( vector3df(30,0,0), 30 );
-      //agents[0]->Seek(vector3df(-50,0,-50), wall, true);
-
-	//game.setViewMode( Game::FIRST_PERSON );
-
-	//Agent& faerie = game.addAgent( game.smgr().getMesh(DEFAULT_MESH.c_str()), game.driver().getTexture(DEFAULT_TEXTURE.c_str()), vector3df(), vector3df(0.0f,0.0f,0.0f), vector3df(1.0f, 1.0f, 1.0f) );
-	//// Make controllable:
-	//cj::Wall wall( &game.device(), "t351sml.jpg");
-	//wall.makeWall(2,10,vector3df(40,0,25));
-	//wall.makeWall(10,2,vector3df(0,0,-60));
-
-	//game.setDebugMode( Debug::RANGEFINDER );
-	//game.setDebugMode( Debug::RADAR );
-
-    //IMeshSceneNode* wall = game.smgr().addCubeSceneNode(5);
-    //wall->setPosition(vector3df(10,0,0));
-    //wall->setMaterialTexture(0, game.driver().getTexture("t351sml.jpg"));
-    //wall->setMaterialFlag(EMF_LIGHTING, false);
-
 #ifndef SWIG
 	game.start();
 #endif

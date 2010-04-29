@@ -10,6 +10,7 @@ namespace cj
 namespace actions
 {
 
+// Moves an Agent to a given destination at specified speed.  Simple reorientation.  
 class MoveAction : public actions::IAction//, public Timed
 {
 public:
@@ -24,34 +25,22 @@ private:
 	const f32 speed;
 };// MoveAction
 
+// For traversing a list of points with A*.  TODO: A ctor that takes an iterator to a list of points.
 class FollowPathAction : public ActionSeq
 { };// FollowPathAction
 
-	//FollowPathAction( Agent& agt, const vector3df& dest, f32 spd )
-	//{}
-
-	//virtual ~FollowPathAction() {}
-
-	//virtual void start()
-	//{
-//private:
-	//Agent& agent;
-	//const vector3df destination;
-	//const f32 speed;
-
-//class ActAgentAttack : public ITickAction
+// id=ATTACK
+//class AttackAction : public actions::IAction
 //{
 //public:
-	//ActAgentAttack( Agent& attacker, Agent& targ );
-	//virtual ~ActAgentAttack();
-	////virtual void onStateBegin();
-	////virtual void onStateEnd();
+	//AttackAction( Agent& attacker, Agent& targ );
+	//virtual ~AttackAction();
+	//virtual void start();
 	//virtual bool runTick( const f32 deltaTime );
-
 //private:
 	//Agent& attacker;
 	//Agent& target;
-//};// ActAgentAttack
+//};// AttackAction
 
 //// id=act-agent-turn
 //class ActAgentTurn : public ITickAction
@@ -84,79 +73,6 @@ class FollowPathAction : public ActionSeq
 	//const f32 speed;
 //};// ActAgentTurn
 
-//// id=act-agent-move
-//class ActAgentMove : public ITickAction
-//{
-//public:
-	//// CTOR
-	//ActAgentMove( Agent& agt, const relVec& dist, f32 spd ): agent(agt), totalDist(dist), speed(spd), rangefinderPrevState(agt.getRangefinder())
-	//{
-		//// We need the rangefinder on, so, if it isn't, make a memo of the state and then enable it temporarily.
-		//if( !rangefinderPrevState )
-		//{	agt.setRangefinder(true, false);	}// if
-	//}// ctor
-
-	//// DTOR
-	//virtual ~ActAgentMove() {}
-
-	//bool runTick( const f32 deltaTime )
-	//{
-		//relVec dist( deltaTime * speed );
-
-		//// If we'd be going to far, scale back
-		//if( dist.getLengthSQ() > totalDist.getLengthSQ() )
-		//{	dist = totalDist;	}// if
-
-		//// TODO: Optional:
-		////agent.getDriver().draw3DLine( agent.getAbsolutePosition().toIrr_vector3df(), dist.to_absVec(agent.getBody()).toIrr_vector3df() );
-
-		//// Do we avoid hitting a wall on the way?
-		//bool success = agent.moveAtomic( dist );
-		//if( success )
-		//{	totalDist -= dist;	}// if
-
-		//assert( relVec() == relVec(0.0,0.0) );// TODO: delete.
-
-		//if ( !success || (totalDist == relVec()) ) // i.e., we ran into a wall and had to stop OR we've completed the movement.
-		//{
-			//// If we're done, set the rangefinder back to the way it was.  Note that the *visibility* of the rangefinder isn't touched, here.
-			//agent.setRangefinder( rangefinderPrevState );
-			//return true;
-		//}// if
-		//else
-		//{	return false;	}// else
-	//}// runTick()
-//private:
-	//Agent& agent;
-	//relVec totalDist;
-	//const f32 speed;
-	//bool rangefinderPrevState; // Restored to this state upon termination
-//};// ActAgentMove
-
-//// ************ ACT AGENT SEEK POSITION
-//// id=position
-//class ActAgentSeekPosition : public ITickAction
-//{
-//public:
-	//ActAgentSeekPosition( Agent& agt, const vector3df& dest, f32 spd );
-	//virtual ~ActAgentSeekPosition();
-	//virtual bool runTick( const f32 deltaTime );
-//private:
-	//Agent& agent;
-	//const vector3df destination;
-	//const f32 speed;
-//};// ActAgentSeekPosition
-
-
-//actions::ActAgentMove* const Agent::seek( const absVec& dest, f32 speed, f32 turnspeed )
-//{
-	//const absVec dest_conv = absVec::from_vector3df(dest);
-	//actions::ActAgentMove* const newact = move( dest_conv.to_relVec(getBody()), speed );
-	////actions::ActAgentMove* const newact = move( dest.to_relVec(getBody()), speed );
-	//if( turnspeed != 0.0 )
-	//{	turn( dest.to_relAngle(getBody()), turnspeed );	}// if
-	//return newact;
-//}// seek()
 
 }// actions
 }// cj

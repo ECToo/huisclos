@@ -187,6 +187,7 @@ actions::FollowPathAction* Agent::visitWaypoints( const TWaypointsList& pointsLi
 	assert( newact->size() == pointsList.size() );
 
 	setCurrentAction(newact);
+	assert( !newact->started() );
 	newact->start();
 
 	return newact;
