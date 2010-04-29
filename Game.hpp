@@ -49,18 +49,6 @@ namespace cj
 
 	using namespace cj::gui;
 
-	//**************** GAME EXCEPTION
-	class GameException
-	{
-	   public:
-	      GameException(const char *msg);
-	      ~GameException();
-	      const char *Message(void) const;
-
-	   private:
-	      const char *description;
-	};// 
-
 	//************** GAME
 	// id=game
 	// NB: Singleton class; DO NOT TRY TO SUBCLASS!

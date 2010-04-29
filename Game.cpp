@@ -2,6 +2,7 @@
 //<url:vimscript::!./make.bsh>
 
 #include "IO.hpp"
+#include "Exception.hpp"
 #include "GameGUI.hpp"
 #include "Game.hpp"
 #include "Wall.hpp"
@@ -21,16 +22,6 @@
 
 namespace cj
 {
-
-GameException::GameException(const char *msg)
-: description(msg)
-{}
-
-GameException::~GameException()
-{}
-
-const char *GameException::Message(void) const
-{  return description;  }
 
 //*************** GAME
 //id=game

@@ -2,6 +2,7 @@
 //#define __AGENT_TEMPLATES__
 
 #include "Agent_actions.hpp"
+#include "Exception.hpp"
 
 namespace cj
 {
@@ -172,7 +173,13 @@ actions::FollowPathAction* Agent::visitWaypoints( const TWaypointsList& pointsLi
 {
 	using namespace cj::actions;
 
-	assert( !pointsList.empty() );
+	//assert( !pointsList.empty() );
+	//if( pointsList.empty() ) { throw "Called visitWaypoints() on an invalid list of points!"; }
+	if( pointsList.empty() ) 
+	{ 
+dpr( "*** A* INVALID!" );
+		throw PathfindException("Called visitWaypoints() on an invalid list of points!"); 
+	}// if
 	//ActionSequence* newact = new ActionSequence;
 	FollowPathAction* newact = new FollowPathAction;
 	//ActionSequence* newact = new ActionSequence;
@@ -183,13 +190,12 @@ actions::FollowPathAction* Agent::visitWaypoints( const TWaypointsList& pointsLi
 		newact->push_back( new MoveAction(*this, *it, speed) );
 		//newact->push_back( new ActAgentSeekPosition(*this, *it, speed) );
 	}// for
-
 	assert( newact->size() == pointsList.size() );
 
 	setCurrentAction(newact);
+
 	assert( !newact->started() );
 	newact->start();
-
 	return newact;
 }// visitWaypoints()
 

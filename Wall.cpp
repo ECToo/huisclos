@@ -72,7 +72,7 @@ vector3df Wall::getRandomNodePosition()
 		chosen = (paths.at(random))->point;
 	} while( !NotWall(chosen) );
 
-dpr( "Randomly chose node " << random << " at " << chosen );
+//dpr( "Randomly chose node " << random << " at " << chosen );
 	//return (paths.front() + random)->point;
 	return chosen;
 }// Wall::getRandomNodePosition()

@@ -14,9 +14,8 @@ namespace actions
 class MoveAction : public actions::IAction//, public Timed
 {
 public:
-	MoveAction( Agent& agt, const vector3df dest, f32 spd ): agent(agt), destination(dest), speed(spd)
-	{}
-	virtual ~MoveAction() {}
+	MoveAction( Agent& agt, const vector3df dest, f32 spd );
+	virtual ~MoveAction() ;
 	virtual void start();
 	virtual bool runTick( const f32 deltaTime );
 private:
@@ -27,7 +26,11 @@ private:
 
 // For traversing a list of points with A*.  TODO: A ctor that takes an iterator to a list of points.
 class FollowPathAction : public ActionSeq
-{ };// FollowPathAction
+{ 
+public:
+	//virtual ~FollowPathAction()
+	//{ assert( started() );	}
+};// FollowPathAction
 
 // id=ATTACK
 //class AttackAction : public actions::IAction

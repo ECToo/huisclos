@@ -6,9 +6,18 @@ namespace cj
 namespace actions
 {
 
+MoveAction::MoveAction( Agent& agt, const vector3df dest, f32 spd ): agent(agt), destination(dest), speed(spd)
+{
+dpr("MoveAction ctor");
+}
+MoveAction::~MoveAction() 
+{ 
+	//assert( started() );	
+}// d
+
 void MoveAction::start()
 {
-dpr("Move started.");
+dpr("Agent " << agent.getID() << " began MoveAction.");
 	assert( !started() );
 	agent.animationRun();
 	agent.getBody().setRotation( (destination - agent.getBody().getAbsolutePosition()).getHorizontalAngle() + vector3df(0,-90.00,0) );
