@@ -30,37 +30,26 @@ struct pointOfInterest
 
 // fwd dec
 class Agent;
-
 namespace actions
 {
 	class MoveAction;
 	class FollowPathAction;
-	class ActAgentSeekPosition;
-	class ActAgentAttack;
+	class DieAction;
+	class AttackAction;
 	//class ActAgentTurn;
-	//class ActAgentMove;
-}//
+}// fwd
 
-class IState
+class IState : public boost::noncopyable
 {
 public:
-	IState(): hasStarted(false) {}
-	virtual ~IState()
-	{	assert( started() );	}
+	IState();
+	virtual ~IState();
 	//virtual void start() = 0;
-	virtual void start()
-	{
-		assert( !started()	);
-		hasStarted = true;
-	}// start()
-	virtual void stop()
-	{
-		assert( hasStarted = true );
-	}// start()
+	virtual void start();
+	virtual void stop();
 	virtual void runTick( f32 deltaTime ) = 0;
 
-	bool started() const
-	{	return hasStarted;	}//
+	bool started() const;
 private:
 	bool hasStarted;
 };// State
@@ -73,25 +62,22 @@ private:
 class ManualState : public IState
 {
 public:
-	ManualState( Agent& ag ): agent(ag)
-	{}
+	ManualState( Agent& ag ): agent(ag) {}
 	virtual ~ManualState() {}
-	virtual void start()
-	{	IState::start();	}
-	virtual void stop()
-	{	IState::stop();	}
+	virtual void start();
+	virtual void stop();
 	void runTick( f32 frameDeltaTime );
 private:
 	Agent& agent;
 };// ManualState
 
+
 // id=wander
 class WanderState : public IState
 {
 public:
-	WanderState( Agent& ag ): agent(ag), wander(NULL)
-	{}
-
+	WanderState( Agent& ag ): agent(ag), wander(NULL) {}
+	virtual ~WanderState() {}
 	virtual void resetWander();
 	virtual void start();
 	virtual void stop();
@@ -100,6 +86,36 @@ private:
 	Agent& agent;
 	cj::actions::FollowPathAction* wander;
 };// WanderState
+
+//  id=death, id=dead
+class DeathState : public IState
+{
+public:
+	DeathState(Agent& ag);
+	virtual ~DeathState() {}
+	virtual void start();
+	void runTick( f32 deltaTime );
+private:
+	virtual void stop() {}// shouldn't be called
+
+	Agent& agent;
+	actions::DieAction* playdead;
+};// DeathState
+
+// id=fight
+class FightState : public IState
+{
+public:
+	FightState(Agent& ag): agent(ag), attack(NULL) {}
+	virtual ~FightState() {}
+	virtual void start();
+	virtual void resetAttack();
+	virtual void stop();
+	virtual void runTick( f32 frameDeltaTime );
+private:
+	Agent& agent;
+	actions::AttackAction* attack;
+};// Fight
 
 // TODO: Change private to protected once subclass interface has been considered properly.
 // id=agent
@@ -113,15 +129,21 @@ public:
 	static const f32 TURN_FAST;
 
 	typedef vector<pointOfInterest> ContactsList;
-
-	//enum AgentState { MANUAL, DEAD, ATTACK, MOVE };
 	typedef IState* AgentState;
+	//enum AgentState { MANUAL, DEAD, ATTACK, MOVE };
 
 	ManualState* const Manual;
 	WanderState* const Wander;
+	DeathState* const Dead;
+	FightState* const Fight;
 
 	// TODO: Polymorphism would be superior.  Would mean changing addAgent() yet again.
 	enum MOB { FAIRY };// MOB
+
+
+	typedef vector<Agent*> (* agentsListCallback)();
+	//static agentsListCallback getList();
+	static agentsListCallback getAgentsList;
 
 	static s32 nextAvailableID;
 	static s32 genID(); // Returns the next unused Agent ID int.
@@ -213,8 +235,10 @@ public:
 	//const Agent* getAttackTarget() const;
 	//Agent* getAttackTarget();
 	//void setAttackTarget( Agent* const targ );
-	template <typename TAgentsList> vector<Agent*> getVisibleAgents( TAgentsList&, bool countIfDead=false ); // Returns list of all Agents visible to the caller.
-	template <typename TAgentsList> bool isEnemyVisible( TAgentsList&, bool countIfDead=false ) const;
+	vector<Agent*> getVisibleAgents( bool countIfDead=false ) const; // Returns list of all Agents visible to the caller.
+	//template <typename TAgentsList> vector<Agent*> getVisibleAgents( TAgentsList&, bool countIfDead=false ); // Returns list of all Agents visible to the caller.
+	bool isEnemyVisible( bool countIfDead=false ) const;
+	//template <typename TAgentsList> bool isEnemyVisible( TAgentsList&, bool countIfDead=false ) const;
 	//template <typename TAgentsList> vector<Agent*> getVisibleAgents( typename TAgentsList::iterator it, const typename TAgentsList::iterator end ); // Returns list of all Agents visible to the caller.
 	//bool isEnemyVisible(); // True if there is a line-of-sight to any other agent.
 
@@ -232,7 +256,7 @@ public:
 
 	void Die();
 	void TakeDamage( const s32 damage );
-	actions::ActAgentAttack* const Attack( Agent& target );
+	actions::AttackAction* const Attack( Agent& target );
 
 	//actions::ActAtkMelee* AttackMelee( Agent& target );
 	//ActAtkRanged* AttackRanged( Agent& target );
@@ -259,8 +283,11 @@ public:
 	// This will be my section.
 	bool MoveVector(vector3df distance);  //COLLISON MOVEMENT
 
-// id=private
+// id=private, id=priv
 private:
+
+	//agentsListCallback getAgentsList;// TODO: Accessors.
+
 	IrrlichtDevice *device; //get driver and smgr from this
 	IVideoDriver* driver; //for drawing
 	ISceneManager* smgr; //needed for adding cubes

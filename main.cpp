@@ -56,12 +56,14 @@ int main()
 	Agent& faerie = game.addAgent( vector3df(0,0,100) );
 	//faerie.MoveTo( vector3df(60,0,90), 50 );
 	//faerie.Seek(vector3df(-50,0,-50), 100);
-	faerie.setState( faerie.Wander );
+	//faerie.setState( faerie.Wander );
+	//faerie.setState( faerie.Dead );
+	faerie.setState( faerie.Fight );
 
-	Agent& f2 = game.addAgent( vector3df(0,0,100) );
-		f2.setState( f2.Wander );
+	//Agent& f2 = game.addAgent( vector3df(0,0,100) );
+		//f2.setState( f2.Wander );
 	Agent& f3 = game.addAgent( vector3df(-100,0,-100) );
-		f3.setState( f3.Wander );
+		//f3.setState( f3.Wander );
 		//game.addAgent( vector3df(60,0,100) ).setState( Agent::ATTACK );
 #ifndef SWIG
 	game.start();

@@ -1,6 +1,37 @@
 #include "Agent.hpp"
-// TEST
+#include <cstdlib> // rand()
+#include <ctime> // time()
+
 namespace cj {
+
+IState::IState(): hasStarted(false) {}
+
+IState::~IState()
+{	assert( started() );	}
+
+void IState::start()
+{
+	assert( !started()	);
+	hasStarted = true;
+}// start()
+
+void IState::stop()
+{
+	assert( hasStarted = true );
+	hasStarted = false;
+}// start()
+
+bool IState::started() const
+{	return hasStarted;	}//
+
+// id=manual
+void ManualState::start()
+{
+	assert( !started()	);
+	IState::start();
+}
+void ManualState::stop()
+{	IState::stop();	}
 
 void ManualState::runTick( f32 frameDeltaTime )
 {
@@ -66,8 +97,7 @@ void WanderState::runTick( f32 deltaTime )
 {
 	assert( started() );
 	assert( agent.getCurrentAction() );
-	// FIXME:
-	if( true/*!agent.isEnemyVisible()*/ )
+	if( !agent.isEnemyVisible() /*true*/ )
 	{
 		assert( wander == agent.getCurrentAction() );
 		if( agent.getCurrentAction()->runTick(deltaTime) )
@@ -77,20 +107,99 @@ dpr( "Agent " << agent.getID() << " finished a Wander-state circuit." );
 			resetWander();
 		}// if
 	}// if
-	else // switch states
+	else // Attack mode
 	{
-		// FIXME:
-	//	stop();
-		//agent.setState(agent.Attack);
+		stop();
+		agent.setState(agent.Fight);
 	}// else
 }// runTick()
 
+
+//  id=death, id=dead
+DeathState::DeathState(Agent& ag): agent(ag), playdead(NULL)
+{}
+
+void DeathState::start()
+{
+	assert( !started()	);
+	assert( !agent.getCurrentAction() );
+	playdead = new actions::DieAction(agent);
+	agent.setCurrentAction(playdead);
+	playdead->start();
+	IState::start();
+}// start()
+
+void DeathState::runTick( f32 deltaTime )
+{
+	assert( playdead );
+	assert( started() );
+	assert( playdead == agent.getCurrentAction() );
+	playdead->runTick(deltaTime);
+}// runTick()
+
+// id=fight, id=attack, id=atk
+void FightState::start()
+{
+	assert( !started()	);
+	assert( !agent.getCurrentAction() );
+	assert( !attack );
+	resetAttack();
+	IState::start();
+}// start()
+
+void FightState::resetAttack()
+{
+	agent.clearCurrentAction();
+
+	vector<Agent*> agentsSeen = agent.getVisibleAgents();
+	const u32 random = rand() % agentsSeen.size();
+dpr( "Agent " << agent.getID() << " attacking visible Agent #" << random );
+
+	//it->getNearbyRandomEnemy()
+	attack = new actions::AttackAction( agent, **(agentsSeen.begin() + random) );
+	agent.setCurrentAction(attack);
+	attack->start();
+}// resetAttack()
+
+void FightState::stop()
+{
+	assert( attack );
+	assert( attack == agent.getCurrentAction() );
+	agent.clearCurrentAction();
+	attack = NULL;
+	IState::stop();
+}// stop()
+
+void FightState::runTick( f32 frameDeltaTime )
+{
+//dpr( "FightState runtick" );
+	if( agent.isEnemyVisible() )
+	{
+//dpr( "Enemy seen." );
+		assert( attack == agent.getCurrentAction() );
+		//if( !attack )
+		//{	start();	}// if
+
+		if( !attack || attack->runTick(frameDeltaTime) )
+		{	resetAttack(); }// if
+	}// if
+	else // transition to MOVE.
+	{
+		stop();
+		agent.setState( agent.Wander );
+	}// else
+}// runTick()
+
+//id=agent
+//
 const f32 Agent::MOVEMENT_SLOW = 12.0f;
 const f32 Agent::MOVEMENT_FAST = 60.0f;
 const f32 Agent::TURN_SLOW = 70.0f;
 const f32 Agent::TURN_FAST = 180.0f;
 
 const f32 Agent::DEFAULT_GIRTH = 15.0; // FIXME: This was arbitrarily chosen.
+
+Agent::agentsListCallback Agent::getAgentsList = NULL;
 
 s32 Agent::genID()
 {
@@ -141,6 +250,8 @@ Agent::Agent(IrrlichtDevice* d, stringw mesh, stringw t, stringw h, const vector
 	hasMoveTarget(false),
 	Manual( new ManualState(*this) ),// TODO: plug leak
 	Wander( new WanderState(*this) ),// TODO: plug leak
+	Dead( new DeathState(*this) ),// TODO: plug leak
+	Fight( new FightState(*this) ),// TODO: plug leak
 	currentState( Manual ),
 	HitPoints(HP),
 	Strength(Str),
@@ -312,6 +423,28 @@ inline bool Agent::operator==(const Agent& rhs) const
 inline bool Agent::operator!=(const Agent& rhs) const
 {	return !( this == &rhs ); }// !=()
 
+vector<Agent*> Agent::getVisibleAgents( bool countIfDead ) const
+{
+	vector<Agent*> allAgents = Agent::getAgentsList();
+	vector<Agent*> visAgents;
+
+
+	for( vector<Agent*>::iterator it = allAgents.begin(); it != allAgents.end(); ++it )
+	{
+		if( this != *it &&
+			( countIfDead || !(*it)->isDead() ) &&
+			getLineOfSightExists( *this, **it )
+		  ){	visAgents.push_back(*it);	}// if
+	}// for
+
+	return visAgents;
+}// getVisibleAgents()
+
+bool Agent::isEnemyVisible( bool countIfDead ) const
+{
+	return !getVisibleAgents(countIfDead).empty();
+}// isEnemyVisible()
+
 void Agent::setRangefinder( bool mode, bool vis )
 {
 	setRangefinderVisible(vis);
@@ -342,12 +475,16 @@ Agent::AgentState Agent::getState() const
 
 void Agent::setState( Agent::AgentState s )
 {
-	currentState = s;
-	currentState->start();
+	if( getState() != s )
+	{
+		assert( !isDead() );
+		currentState = s;
+		currentState->start();
+	}// if
 }// setState()
 
-//bool Agent::isDead() const
-//{	return getState() == Agent::DEAD;	}// isDead()
+bool Agent::isDead() const
+{	return getState() == this->Dead;	}// isDead()
 
 void Agent::turnAtomic( const relAngle& theta ) {	setRotation( getRotation() + theta );	}// turnAtomic()
 
@@ -541,11 +678,10 @@ void Agent::runTick( f32 frameDeltaTime )
 
 void Agent::Die()
 {
+dpr("Agent " << getID() << " died.");
 	setHP(0);
 	clearAllActions();
-//	setState( Agent::DEAD );
-dpr("NPC " << getID() << " died.");
-	// TODO: Die action, w/ animation
+	setState( this->Dead );
 }// Die()
 
 void Agent::TakeDamage( const s32 damage )
@@ -576,7 +712,10 @@ void Agent::animationAttack()
 {     getBody().setMD2Animation(scene::EMAT_ATTACK);	}//  Agent::animationAttack()
 
 void Agent::animationDie()
-{     getBody().setMD2Animation(scene::EMAT_DEATH_FALLFORWARD);	}//
+{
+	getBody().setLoopMode(false);
+	getBody().setMD2Animation(scene::EMAT_DEATH_FALLFORWARD);
+}//
 
 void Agent::animationRun()
 {     getBody().setMD2Animation(scene::EMAT_RUN);	}//

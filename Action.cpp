@@ -22,7 +22,7 @@ bool Timed::periodMet( const f32 frameDeltaTime)
 namespace actions
 {
 
-// id=seq
+// id=eq
 void ActionSeq::push_back( IAction* act )
 {
 	assert( !started() );
@@ -31,12 +31,14 @@ void ActionSeq::push_back( IAction* act )
 
 void ActionSeq::start()
 {
+dpr( "Sequence started." );
 	assert( !empty() );
 	assert( !started() );
 
 	curAction = begin();
 	assert( !curAction->started() );
 	curAction->start();
+	assert(!started());
 	IAction::start();// chain up
 }// start()
 

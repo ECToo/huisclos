@@ -49,16 +49,19 @@ namespace cj
 
 	using namespace cj::gui;
 
+	vector<Agent*> Game_getAgentsList();// ⁅Weird handoff to get a list of agents back to an Agent itself.⁆
+
 	//************** GAME
 	// id=game
 	// NB: Singleton class; DO NOT TRY TO SUBCLASS!
 	class Game : public boost::noncopyable, public cj::sensor::ISensors
 	{
+		friend vector<Agent*> cj::Game_getAgentsList(); // for irrInstance
 	// id=public
 	public:
 		// (Used by EventHandler:)
 		template <EGUI_EVENT_TYPE>
-		static bool handleIt(IGUIElement* const whateverElement) { return false; }// 
+		static bool handleIt(IGUIElement* const whateverElement) { return false; }//
 
 		static const irr::core::dimension2d<u32> DEFAULT_RESOLUTION;
 
@@ -80,7 +83,7 @@ namespace cj
 		void resume();
 
 		GameState getState() const;
-		
+
 		// id=mode, id=viewmode
 		enum ViewMode
 		{
