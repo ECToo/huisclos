@@ -8,6 +8,7 @@
 #include "boost/utility.hpp" // boost::noncopyable
 
 #include "Wall.hpp"
+//#include "State.hpp"
 #include "Sensor.hpp"
 #include "Action.hpp"
 #include "Coordinates.hpp"
@@ -28,8 +29,12 @@ struct pointOfInterest
 };
 
 // fwd dec
+class Agent;
+
 namespace actions
 {
+	class MoveAction;
+	class FollowPathAction;
 	class ActAgentSeekPosition;
 	class ActAgentAttack;
 	//class ActAgentTurn;
@@ -37,9 +42,61 @@ namespace actions
 	// TODO: ActAgentVisitWaypoints < ActionSequence
 }//
 
+class IState
+{
+public:
+	//IState(): hasStarted(false) {}
+	//virtual ~IState()
+	//{	assert( started() );	}
+	virtual void start() = 0;
+	//virtual void start()
+	//{	hasStarted = true;	}// start()
+	virtual void stop() = 0;
+	virtual void runTick( f32 deltaTime ) = 0;
+
+	//bool started() const
+	//{	return hasStarted;	}//
+//private:
+	//bool hasStarted;
+};// State
+
+//class State
+//{
+//};// State
+
+// id=manual-state
+class ManualState : public IState
+{
+public:
+	ManualState( Agent& ag ): agent(ag)
+	{}
+	virtual ~ManualState() {}
+	virtual void start() {}
+	virtual void stop() {}
+	void runTick( f32 frameDeltaTime );
+private:
+	Agent& agent;
+};// ManualState
+
+// id=wander
+class WanderState : public IState
+{
+public:
+	WanderState( Agent& ag ): agent(ag), wander(NULL)
+	{}
+
+	virtual void resetWander();
+	virtual void start();
+	virtual void stop();
+	void runTick( f32 deltaTime );
+private:
+	Agent& agent;
+	cj::actions::FollowPathAction* wander;
+};// WanderState
+
 // TODO: Change private to protected once subclass interface has been considered properly.
 // id=agent
-class Agent : public boost::noncopyable, public sensor::SSensors //, public IStateEntity
+class Agent : public boost::noncopyable, public sensor::SSensors, public Timed
 {
 public:
 	static const f32 DEFAULT_GIRTH;
@@ -50,7 +107,11 @@ public:
 
 	typedef vector<pointOfInterest> ContactsList;
 
-	enum AgentState { MANUAL, DEAD, ATTACK, MOVE };
+	//enum AgentState { MANUAL, DEAD, ATTACK, MOVE };
+	typedef IState* AgentState;
+
+	ManualState* const Manual;
+	WanderState* const Wander;
 
 	// TODO: Polymorphism would be superior.  Would mean changing addAgent() yet again.
 	enum MOB { FAIRY };// MOB
@@ -85,11 +146,12 @@ public:
 
 	// id=ACTIONS:
 	// Also look in protected: section.
-	actions::ActAgentSeekPosition* const Goto( const vector3df& dest, f32 speed );// Go straight to the destination.
-	template <typename TWaypointsList> actions::ActionSequence* visitWaypoints( const TWaypointsList& pointsList, f32 speed );
-	actions::ITickAction* const Seek( const vector3df& dest, const cj::Wall& w, f32 speed=0.00, bool debug=true );// Pathfind to the destination with A*.  Leaving speed=0 will cause that Agent's default speed to be used.
+	//actions::ActAgentSeekPosition* const Goto( const vector3df& dest, f32 speed );// Go straight to the destination.
+	actions::MoveAction* const MoveTo( const vector3df dest, f32 speed );// Go straight to the destination.
+	template <typename TWaypointsList> actions::FollowPathAction* visitWaypoints( const TWaypointsList& pointsList, f32 speed );
+	actions::FollowPathAction* const Seek( const vector3df dest, /*const cj::Wall& w, */ f32 speed=0.00, bool debug=true );// Pathfind to the destination with A*.  Leaving speed=0 will cause that Agent's default speed to be used.
 	void clearAllActions();
-	void doTickActions( f32 frameDeltaTime );// Used by Game.
+	void runTick( f32 frameDeltaTime );// Used by Game.
 
 	vector<f32> DrawFeelers(bool debug = false);  //wall collision detection
 	// TODO: Even better: make these func templates taking const_iterators.)
@@ -138,12 +200,13 @@ public:
 	// Called by Game; not for end-user.  Unfortunately, two of the sensor types require iteration, and the list will be traversed twice.  Coroutines would solve the problem.
 	template <typename TAgentsIterator> void updateSensors(const TAgentsIterator& begin, const TAgentsIterator& end);
 
-	bool getHasMoveTarget() const;
-	void setHasMoveTarget( const bool b );
-	const Agent* getAttackTarget() const;
-	Agent* getAttackTarget();
-	void setAttackTarget( Agent* const targ );
+	//bool getHasMoveTarget() const;
+	//void setHasMoveTarget( const bool b );
+	//const Agent* getAttackTarget() const;
+	//Agent* getAttackTarget();
+	//void setAttackTarget( Agent* const targ );
 	template <typename TAgentsList> vector<Agent*> getVisibleAgents( TAgentsList&, bool countIfDead=false ); // Returns list of all Agents visible to the caller.
+	template <typename TAgentsList> bool isEnemyVisible( TAgentsList&, bool countIfDead=false ) const;
 	//template <typename TAgentsList> vector<Agent*> getVisibleAgents( typename TAgentsList::iterator it, const typename TAgentsList::iterator end ); // Returns list of all Agents visible to the caller.
 	//bool isEnemyVisible(); // True if there is a line-of-sight to any other agent.
 
@@ -177,14 +240,16 @@ public:
 	//virtual void onStateEnd();
 	//virtual bool onTick( u32 frameDeltaTime_ms );
 
+	const actions::IAction* getCurrentAction() const;
+	actions::IAction* getCurrentAction();
+	void clearCurrentAction();
+	void setCurrentAction( actions::IAction* const newact );
+
+	//Wall& wall; // ⁅Dammit, I don't want to have to store this⁆
+
 	// <TAG> CA - NOTE: Do not add public functions to Agent beyond this line.
 	// This will be my section.
 	bool MoveVector(vector3df distance);  //COLLISON MOVEMENT
-protected:
-	const actions::ITickAction* getCurrentAction() const;
-	actions::ITickAction* getCurrentAction();
-	void clearCurrentAction();
-	void setCurrentAction( actions::ITickAction* const newact );
 
 // id=private
 private:
@@ -210,9 +275,10 @@ private:
 	ContactsList nearbyAgents;
 	vector<f32> activationLevels;
 
-	actions::ITickAction* currentAction;
+	IState* currentState;
+	actions::IAction* currentAction;
 	actions::ActionsList actionsList;
-	AgentState currentState;
+
 	Agent* attackTarget;
 	bool hasMoveTarget;
 

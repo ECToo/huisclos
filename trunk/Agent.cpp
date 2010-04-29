@@ -2,6 +2,58 @@
 // TEST
 namespace cj {
 
+void ManualState::runTick( f32 frameDeltaTime )
+{
+	if( agent.getCurrentAction() )
+	{
+		const bool bDone = agent.getCurrentAction()->runTick(frameDeltaTime);
+		if( bDone )
+		{
+			assert( agent.getCurrentAction() );
+			agent.clearCurrentAction();
+			agent.animationStand();
+		}// if
+	}// if
+}// runTick()
+
+void WanderState::start()
+{
+	assert( !wander );
+	resetWander();
+}// start
+
+void WanderState::stop()
+{
+	assert( wander );
+	delete wander;
+	wander = NULL;
+}// stop()
+
+void WanderState::resetWander()
+{
+	if( wander )
+	{
+		delete wander;
+	}// if
+	wander = agent.Seek( Wall::Instance().getRandomNodePosition() ) ;
+}// resetWander()
+
+void WanderState::runTick( f32 deltaTime )
+{
+	assert( wander );
+	// FIXME: 
+	if( true/*!agent.isEnemyVisible()*/ )
+	{
+		if( wander->runTick(deltaTime) )
+		{	resetWander();	}// if
+	}// if
+	else // switch states
+	{
+		// FIXME:
+	//	stop();
+		//agent.setState(agent.Attack);
+	}// else
+}// runTick()
 
 const f32 Agent::MOVEMENT_SLOW = 12.0f;
 const f32 Agent::MOVEMENT_FAST = 60.0f;
@@ -41,8 +93,9 @@ bool Agent::getLineOfSightExists( const Agent& a1, const Agent& a2 )
 }//
 
 
-// id=ctor ⁅This is a search marker for me in Vim⁆
+// id=ctor
 Agent::Agent(IrrlichtDevice* d, stringw mesh, stringw t, stringw h, const vector3df& p, const s32 HP, const s32 Str, const s32 Spd, const s32 Acc):
+	Timed(20),
 	device(d),
 	path(h),
 	texture(t),
@@ -54,17 +107,16 @@ Agent::Agent(IrrlichtDevice* d, stringw mesh, stringw t, stringw h, const vector
 	activationLevels(),
 	currentAction(NULL),
 	actionsList(),
-	currentState( Agent::MANUAL ),
+	//currentState( Agent::MANUAL ),
 	attackTarget(NULL),
 	hasMoveTarget(false),
+	Manual( new ManualState(*this) ),// TODO: plug leak
+	Wander( new WanderState(*this) ),// TODO: plug leak
+	currentState( Manual ),
 	HitPoints(HP),
 	Strength(Str),
 	Speed(Spd),
-	Accuracy(Acc),
-	period( 0.05 ),
-	tickDeltaTime(period)
-	//period_ms( 1000 / 2 ),
-	//tickDeltaTime_ms(period_ms)
+	Accuracy(Acc)
 { AgentCtorImpl(mesh, p); }// ctor
 
 void Agent::AgentCtorImpl(stringw mesh, const vector3df& p)
@@ -257,10 +309,13 @@ Agent::AgentState Agent::getState() const
 {	return currentState;	}// getState()
 
 void Agent::setState( Agent::AgentState s )
-{	currentState = s;	}// setState()
+{	
+	currentState = s;	
+	currentState->start();
+}// setState()
 
-bool Agent::isDead() const
-{	return getState() == Agent::DEAD;	}// isDead()
+//bool Agent::isDead() const
+//{	return getState() == Agent::DEAD;	}// isDead()
 
 void Agent::turnAtomic( const relAngle& theta ) {	setRotation( getRotation() + theta );	}// turnAtomic()
 
@@ -293,7 +348,6 @@ bool Agent::moveAtomic( const relVec& dest )
     // find collision amounts for new position
     setPosition( old_position + dest );
 
-// TODO: Do I need this?
     // NOTE: MUST call this anytime you use setPosition and want to use the new
     // position of the IAnimatedSceneNode in the same tick
     body->updateAbsolutePosition();
@@ -320,9 +374,9 @@ bool Agent::moveAtomic( const relVec& dest )
     return moved;
 }
 
-const actions::ITickAction* Agent::getCurrentAction() const
+const actions::IAction* Agent::getCurrentAction() const
 {	return currentAction;	}
-actions::ITickAction* Agent::getCurrentAction()
+actions::IAction* Agent::getCurrentAction()
 {	return currentAction;	}
 
 void Agent::clearCurrentAction()
@@ -335,30 +389,55 @@ dpr( "Clearing action." );
 	}// if
 }// clearCurrentAction()
 
-void Agent::setCurrentAction( actions::ITickAction* const newact )
+void Agent::setCurrentAction( actions::IAction* const newact )
 {
+dpr("Setting action.");
 	clearCurrentAction();
 
 	currentAction = newact;
 }// setCurrentAction()
 
-actions::ActAgentSeekPosition* const Agent::Goto( const vector3df& dest, f32 speed )
+actions::MoveAction* const Agent::MoveTo( const vector3df dest, f32 speed )
 {
-	actions::ActAgentSeekPosition* newact = new actions::ActAgentSeekPosition(*this, dest, speed );
+	actions::MoveAction* newact = new actions::MoveAction(*this, dest, speed );
 	assert(newact);
 	setCurrentAction(newact);
-	// TODO: Move into Action:
-	setHasMoveTarget( true );
-	animationRun();
+
+	newact->start();
 	return newact;
-}// Goto()
+}// MoveTo()
+
+//actions::ActAgentSeekPosition* const Agent::Goto( const vector3df& dest, f32 speed )
+//{
+	//actions::ActAgentSeekPosition* newact = new actions::ActAgentSeekPosition(*this, dest, speed );
+	//assert(newact);
+	//setCurrentAction(newact);
+	//// TODO: Move into Action:
+	//setHasMoveTarget( true );
+	//animationRun();
+	//return newact;
+//}// Goto()
 
 // id=seek
-actions::ITickAction* const Agent::Seek( const vector3df& dest, const Wall& w, f32 speed, bool debug )
+actions::FollowPathAction* const Agent::Seek( const vector3df dest, /*const Wall& w,*/ f32 speed, bool debug )
 {
-	return visitWaypoints( const_cast<Wall&>(w).AStar(getBody().getPosition(), dest, 2, debug),
+	//return visitWaypoints( const_cast<Wall&>(w).AStar(getBody().getPosition(), dest, 2, debug),
+	return visitWaypoints( Wall::Instance().AStar(getBody().getPosition(), dest, 2, debug),
 		(speed == 0 ? getSpd() : speed) );
 }// Seek()
+	////return visitWaypoints( const_cast<Wall&>(w).AStar(getBody().getPosition(), dest, 2, debug),
+	//std::list<vector3df> points = Wall::Instance().AStar(getBody().getPosition(), dest, 2, debug);
+	//while( points.empty() )
+	//{
+//dpr( "Picking another point." );
+	//,
+	//return visitWaypoints( 
+		//(speed == 0 ? getSpd() : speed) );
+//actions::IAction* const Agent::Seek( const vector3df& dest, const Wall& w, f32 speed, bool debug )
+//{
+	//return visitWaypoints( const_cast<Wall&>(w).AStar(getBody().getPosition(), dest, 2, debug),
+		//(speed == 0 ? getSpd() : speed) );
+//}// Seek()
 
 void Agent::clearAllActions()
 {
@@ -369,58 +448,69 @@ void Agent::clearAllActions()
 //inline void Agent::turnAtomic( const relAngle& theta )
 //{	setRotation( getRotation() + theta );	}// turnAtomic()
 
-void Agent::doTickActions( f32 frameDeltaTime )
+// id=runtick, id=run-tick
+void Agent::runTick( f32 frameDeltaTime )
 {
-	using namespace actions;
-
-	//for( ActionsList::iterator it = actionsList.begin(); it != actionsList.end(); ++it )
-	//{	it->runTick( frameDeltaTime );	}// for
-	if( getCurrentAction() )
-	{
-		// TODO: If possible, use ints and ms--faster than floats
-		//tickDeltaTime_ms += frameDeltaTime_ms;
-		//if( tickDeltaTime_ms >= period_ms )
-		//{
-			//tickDeltaTime_ms = 0;
-		tickDeltaTime += frameDeltaTime;
-		if( tickDeltaTime >= period )
+	assert( getState() );
+	//if( getCurrentAction() )
+	//{
+		if( periodMet(frameDeltaTime) )
 		{
-//dpr( "Running tick " << tickDeltaTime );
-			//const bool bDone = getCurrentAction()->runTick(frameDeltaTime);
-			const bool bDone = getCurrentAction()->runTick(tickDeltaTime);
-			if( bDone )
-			{
-				assert( getCurrentAction() );
-				clearCurrentAction();
-			}// if
-			else // restart wait for next tick
-			{ 	tickDeltaTime = 0.00; }// else
+//dpr("runtick");
+			getState()->runTick(frameDeltaTime);
 		}// if
-	}// if
-}// doTickActions
+	//}// if
+	//using namespace actions;
 
-void Agent::setHasMoveTarget( const bool b )
-{	 hasMoveTarget = b;	}
-bool Agent::getHasMoveTarget() const
-{	return hasMoveTarget;	}//
+	////for( ActionsList::iterator it = actionsList.begin(); it != actionsList.end(); ++it )
+	////{	it->runTick( frameDeltaTime );	}// for
+	//if( getCurrentAction() )
+	//{
+		//// TODO: If possible, use ints and ms--faster than floats
+		////tickDeltaTime_ms += frameDeltaTime_ms;
+		////if( tickDeltaTime_ms >= period_ms )
+		////{
+			////tickDeltaTime_ms = 0;
+		//tickDeltaTime += frameDeltaTime;
+		//if( tickDeltaTime >= period )
+		//{
+////dpr( "Running tick " << tickDeltaTime );
+			////const bool bDone = getCurrentAction()->runTick(frameDeltaTime);
+			//const bool bDone = getCurrentAction()->runTick(tickDeltaTime);
+			//if( bDone )
+			//{
+				//assert( getCurrentAction() );
+				//clearCurrentAction();
+			//}// if
+			//else // restart wait for next tick
+			//{ 	tickDeltaTime = 0.00; }// else
+		//}// if
+	//}// if
+}// runTick
 
-const Agent* Agent::getAttackTarget() const
-{	return attackTarget;	}//
+//void Agent::setHasMoveTarget( const bool b )
+//{	 hasMoveTarget = b;	}
+//bool Agent::getHasMoveTarget() const
+//{	return hasMoveTarget;	}//
 
-Agent* Agent::getAttackTarget()
-{	return attackTarget;	}//
+//const Agent* Agent::getAttackTarget() const
+//{	return attackTarget;	}//
 
-void Agent::setAttackTarget( Agent* const targ )
-{	attackTarget = targ;	}
+//Agent* Agent::getAttackTarget()
+//{	return attackTarget;	}//
+
+//void Agent::setAttackTarget( Agent* const targ )
+//{	attackTarget = targ;	}
 
 //bool Agent::isEnemyVisible()
 //{
+
 
 void Agent::Die()
 {
 	setHP(0);
 	clearAllActions();
-	setState( Agent::DEAD );
+//	setState( Agent::DEAD );
 dpr("NPC " << getID() << " died.");
 	// TODO: Die action, w/ animation
 }// Die()
@@ -440,22 +530,22 @@ dpr( "HP: " << getHP() );
 	if( getHP() == 0 )
 	{
 		Die();
-		assert( getState() == Agent::DEAD );
+//		assert( getState() == Agent::DEAD );
 	}// if
 }// TakeDamage()
 
-actions::ActAgentAttack* const Agent::Attack( Agent& target )
-{
-	assert( Agent::getLineOfSightExists( *this, target ) );
-	actions::ActAgentAttack* newact = new actions::ActAgentAttack(*this, target);
-	assert(newact);
-	setCurrentAction(newact);
+//actions::ActAgentAttack* const Agent::Attack( Agent& target )
+//{
+	//assert( Agent::getLineOfSightExists( *this, target ) );
+	//actions::ActAgentAttack* newact = new actions::ActAgentAttack(*this, target);
+	//assert(newact);
+	//setCurrentAction(newact);
 
-	// TODO: Move into Action body:
-	setAttackTarget(&target);
-	animationAttack();
-	return newact;
-}// Attack()
+	//// TODO: Move into Action body:
+	//setAttackTarget(&target);
+	//animationAttack();
+	//return newact;
+//}// Attack()
 
 
 
