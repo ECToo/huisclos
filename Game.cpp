@@ -933,7 +933,11 @@ void Game::doTickKeyboardIO()
 			}// if
 
 
-			// FIXME: Move to GUI section:
+			// FIXME: Attack logic.
+			//getPC().shouldAttack = get-is-attack-button-pressed;
+
+
+			// TODO: Move to GUI section:
 			// Output debug coords:
 			std::wostringstream coords;
 			coords << L"PC " <<
@@ -958,72 +962,13 @@ void Game::doTickAgentsActions()
 	{
 		toDelete.clear();
 
+		// FIXME: 
 		if( !getIsPCSet() || (getPC() != *it) )
 		{
-			// id=FSM tick:
-			if( it->getState() == Agent::DEAD )
-			{
-				toDelete.push_back( &(*it) );
-				// TODO: Remove body; delete agent.  Note that deleting it *here* will void the iterator!
-			}// if
-			else
-			{
-				if(  it->getState() == Agent::MANUAL )
-				{	/*Continue to doTickActions()*/	}// if
-				else// FSM
-				{
-					vector<Agent*> agentsSeen = it->getVisibleAgents( agents() );
-					//vector<Agent*> agentsSeen = it->getVisibleAgents( agents().begin(), agents().end() );
 
-					if( it->getState() == Agent::ATTACK )
-					{
-						assert( !it->getHasMoveTarget() );
-						if( it->getAttackTarget() == NULL )//
-						{
-							if( agentsSeen.empty() ) // transition to MOVE.
-							//if( !it->isEnemyVisible() )
-							{
-dpr( "Agent " << it->getID() << " ATTACK -> MOVE." );
-								it->setState( Agent::MOVE );
-							}// if
-							else // pick new target
-							{
-								const u32 random = rand() % agentsSeen.size();
-dpr( "Agent " << it->getID() << " attacking visible Agent #" << random );
-								//it->getNearbyRandomEnemy()
-								it->Attack( *(agentsSeen.front() + random) );
-							}// else
-						}// if
-						// else continue attacking
-					}// if
-					else if( it->getState() == Agent::MOVE )
-					{
-						// If nobody around, wander to a random point on the map.
-						if( agentsSeen.empty() )
-						//if( !it->isEnemyVisible() )
-						{
-							if( !it->getHasMoveTarget() )
-							{
-dpr( "Agent " << it->getID() << " wandering." );
-//dpr( walls().size() );
-								it->Seek( wall().getRandomNodePosition(), wall() );
-								assert( it->getHasMoveTarget() );
-							}// if
-							// Continue to doTickActions()
-						}// if
-						else // transition to ATTACK.
-						{
-dpr( "Agent " << it->getID() << " MOVE -> ATTACK." );
-							it->setState( Agent::ATTACK ); 
-							it->setHasMoveTarget(false);
-						}// else
-					}// elif MOVE state
-					else
-					{	assert(false); /* Invalid state*/ }// else
-				}// if not MANUAL
+//dpr("runtick");
+			it->runTick(static_cast<f32>(curTick - prevTick) / 1000.00); // NEXT ACTION
 
-				it->doTickActions(static_cast<f32>(curTick - prevTick) / 1000.f); // NEXT ACTION
-			}// elsif not dead
 		}// if not PC
 
 		for( vector<Agent*>::iterator it = toDelete.begin(); it != toDelete.end(); ++it )

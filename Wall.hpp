@@ -34,18 +34,18 @@ const f32 SQRT2 = sqrt(2);
 class WallException
 {
    public:
-      WallException(const char *msg);
+	  WallException(const char *msg);
       ~WallException();
       const char *Message(void) const;
 
    private:
-      const char *description;
+	  const char *description;
 };
 
 class Wall
 {
    public:
-	 // TODO: Make ctor accessible only to Game
+	static Wall& Instance();
       Wall(IrrlichtDevice* d, stringw t, u32 dsize = 10);
       ~Wall();
       void makeWall(u32 length, u32 width, vector3df position); //create a long wall
@@ -56,6 +56,7 @@ class Wall
       bool operator== (const Wall& rhs) const;
       vector3df getRandomNodePosition(); // Returns the coords for a random node in the graph.
    private:
+    static Wall* singleton;
       Wall(const Wall& other);
       Wall operator= (const Wall& rhs) const;
 

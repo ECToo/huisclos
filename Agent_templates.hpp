@@ -166,27 +166,30 @@ void Agent::updateSensors(const TAgentsIterator& begin, const TAgentsIterator& e
 	{ setActivationOutput( DrawPieSlices( begin, end, getActivationLevelsVisible() ) ); }// if
 }// updateSensors()
 
+
 template <typename TWaypointsList>
-actions::ActionSequence* Agent::visitWaypoints( const TWaypointsList& pointsList, f32 speed )
+actions::FollowPathAction* Agent::visitWaypoints( const TWaypointsList& pointsList, f32 speed )
 {
 	using namespace cj::actions;
 
-	ActionSequence* act = new ActionSequence;
+	assert( !pointsList.empty() );
+	//ActionSequence* newact = new ActionSequence;
+	FollowPathAction* newact = new FollowPathAction;
+	//ActionSequence* newact = new ActionSequence;
 
 	for( typename TWaypointsList::const_iterator it = pointsList.begin(); it != pointsList.end(); ++it )
 	{
 //dpr("Pushed " << *it);
-		act->push_back( new ActAgentSeekPosition(*this, *it, speed) );
+		newact->push_back( new MoveAction(*this, *it, speed) );
+		//newact->push_back( new ActAgentSeekPosition(*this, *it, speed) );
 	}// for
 
-	assert( act->size() == pointsList.size() );
+	assert( newact->size() == pointsList.size() );
 
-	setCurrentAction(act);
-	// TODO: Move into Action:
-	setHasMoveTarget( true );
-	animationRun();
+	setCurrentAction(newact);
+	newact->start();
 
-	return act;
+	return newact;
 }// visitWaypoints()
 
 template <typename TAgentsList>
@@ -205,6 +208,14 @@ vector<Agent*> Agent::getVisibleAgents( TAgentsList& allAgents, bool countIfDead
 
 	return visAgents;
 }// getVisibleAgents()
+
+
+template <typename TAgentsList> 
+bool Agent::isEnemyVisible( TAgentsList& allAgents, bool countIfDead ) const
+{
+	return getVisibleAgents(allAgents, countIfDead).empty();
+}// isEnemyVisible()
+
 }// cj
 
 

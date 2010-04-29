@@ -6,6 +6,12 @@
 namespace cj
 {
 
+Wall& Wall::Instance() 
+{	
+	assert(singleton);
+	return *singleton;	
+}// Instance
+
 WallException::WallException(const char *msg)
    : description(msg)
 {}
@@ -18,6 +24,8 @@ const char *WallException::Message(void) const
 
 bool Wall::wall_exists = false;
 
+Wall* Wall::singleton = NULL;
+
 Wall::Wall(IrrlichtDevice* d, stringw t, u32 ds) : device(d), texture(t), dsize(ds)
 {
    dpr("Wall ctor.");
@@ -27,6 +35,7 @@ Wall::Wall(IrrlichtDevice* d, stringw t, u32 ds) : device(d), texture(t), dsize(
    smgr = device->getSceneManager();
    xpos = xneg = zpos = zneg = zrange = 0;
    wall_exists = true;
+   singleton = this;
 }
 
 //Wall::Wall(const Wall& other)
