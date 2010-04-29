@@ -199,29 +199,29 @@ dpr( "*** A* INVALID!" );
 	return newact;
 }// visitWaypoints()
 
-template <typename TAgentsList>
-vector<Agent*> Agent::getVisibleAgents( TAgentsList& allAgents, bool countIfDead )
-//vector<Agent*> Agent::getVisibleAgents( typename TAgentsList::iterator it, const typename TAgentsList::iterator end )
-{
-	vector<Agent*> visAgents;
+//template <typename TAgentsList>
+//vector<Agent*> Agent::getVisibleAgents( TAgentsList& allAgents, bool countIfDead )
+////vector<Agent*> Agent::getVisibleAgents( typename TAgentsList::iterator it, const typename TAgentsList::iterator end )
+//{
+	//vector<Agent*> visAgents;
 
-	for( typename TAgentsList::iterator it = allAgents.begin(); it != allAgents.end(); ++it )
-	{
-		if( 	*this != *it &&
-			( countIfDead || !it->isDead() ) &&
-			getLineOfSightExists( *this, *it )
-		  ){	visAgents.push_back(&*it);	}// if
-	}// for
+	//for( typename TAgentsList::iterator it = allAgents.begin(); it != allAgents.end(); ++it )
+	//{
+		//if( 	*this != *it &&
+			//( countIfDead || !it->isDead() ) &&
+			//getLineOfSightExists( *this, *it )
+		  //){	visAgents.push_back(&*it);	}// if
+	//}// for
 
-	return visAgents;
-}// getVisibleAgents()
+	//return visAgents;
+//}// getVisibleAgents()
 
 
-template <typename TAgentsList> 
-bool Agent::isEnemyVisible( TAgentsList& allAgents, bool countIfDead ) const
-{
-	return getVisibleAgents(allAgents, countIfDead).empty();
-}// isEnemyVisible()
+//template <typename TAgentsList> 
+//bool Agent::isEnemyVisible( TAgentsList& allAgents, bool countIfDead ) const
+//{
+	//return getVisibleAgents(allAgents, countIfDead).empty();
+//}// isEnemyVisible()
 
 }// cj
 

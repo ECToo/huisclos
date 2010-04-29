@@ -10,9 +10,9 @@ MoveAction::MoveAction( Agent& agt, const vector3df dest, f32 spd ): agent(agt),
 {
 dpr("MoveAction ctor");
 }
-MoveAction::~MoveAction() 
-{ 
-	//assert( started() );	
+MoveAction::~MoveAction()
+{
+	//assert( started() );
 }// d
 
 void MoveAction::start()
@@ -22,6 +22,7 @@ dpr("Agent " << agent.getID() << " began MoveAction.");
 	agent.animationRun();
 	agent.getBody().setRotation( (destination - agent.getBody().getAbsolutePosition()).getHorizontalAngle() + vector3df(0,-90.00,0) );
 	agent.getBody().updateAbsolutePosition();
+	assert(!started());
 	actions::IAction::start();// chain up
 }// start()
 
@@ -54,31 +55,43 @@ dpr("Arrived at " << destination);
 	else
 	{	return false;	}// else
 }// runTick()
-	
+
 
 // id=ATTACK
-//AttackAction::AttackAction( Agent& atk, Agent& targ )
-//: attacker(atk), target(targ)
-//{}// ctor
+AttackAction::AttackAction( Agent& atk, Agent& targ )
+: Timed(10), attacker(atk), target(targ)
+{}// ctor
 
-//void AttackAction::start()
-//{
-//dpr( "Agent " << attacker.getID() << " attacks Agent " << target.getID() );
-	////TODO: animationAttack();
-	//const bool hit = true;//TODO: calc hit chance based on ACC & dist
-	//if( hit )
-	//{
-		//const s32 damage = 10;//TODO: calculate damage based on random val & STR
-		//target.TakeDamage(damage);
-	//}// if
-	//IAction::start();// chain up
-//}// start()
+AttackAction::~AttackAction()
+{}
 
-//bool AttackAction::runTick( const f32 deltaTime )
-//{
-	////...
-	//return false; // TODO: Actual retval should be true only when the entire attack sequence is complete.
-//}// runTick()
+void AttackAction::start()
+{
+	assert( !started()	);
+dpr( "Agent " << attacker.getID() << " attacks Agent " << target.getID() );
+	attacker.animationStand();//TODO: attacker.animationAttack();
+	// TODO: Set facing target
+	const bool hit = true;//TODO: calc hit chance based on ACC & dist
+	if( hit )
+	{
+		const s32 damage = 10;//TODO: calculate damage based on random val & STR
+		target.TakeDamage(damage);
+	}// if
+	assert(!started());
+	IAction::start();// chain up
+}// start()
+
+bool AttackAction::runTick( const f32 deltaTime )
+{
+	assert( started() );
+	if( periodMet(deltaTime) )
+	{
+		//...
+		return true; // TODO: Actual retval should be true only when the entire attack sequence is complete.
+	}// if
+	// else
+	return false;
+}// runTick()
 
 }// actions
 }// cj

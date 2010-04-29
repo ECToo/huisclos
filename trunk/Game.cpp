@@ -23,6 +23,21 @@
 namespace cj
 {
 
+vector<Agent*> Game_getAgentsList()
+{
+	vector<Agent*> vec;
+	for( AgentsList::iterator it = Game::irrInstance->agents().begin(); it != Game::irrInstance->agents().end(); ++it )
+	{	vec.push_back( &(*it) );	}// for
+
+//dpr( vec.size() << " vs " << Game::irrInstance->agents().size() );
+	assert( vec.size() == Game::irrInstance->agents().size() );
+
+
+	return vec;
+}// Game_getAgentsList()
+
+
+
 //*************** GAME
 //id=game
 
@@ -121,6 +136,8 @@ dpr( "* GAME CTOR" );
 	// TODO: Other initializations:
 	driver().setTransform(ETS_WORLD, IdentityMatrix);
 
+	// Set callback for Agent:
+	Agent::getAgentsList = cj::Game_getAgentsList;
 }// C
 
 // id=DTOR, id=game-dtor
@@ -361,10 +378,21 @@ void Game::setPC( Agent& agent )
 		assert( gui().getActivation() == false );
 	}// else
 
+	//if( getPC() != agent )
+	//{
+		//pc = NULL;
+		//agent.setState( agent.Wander );
+	//}// if
+
 	gui().setPC( agent );
 
 	// NB: Do this LAST:
+	Agent* const former = pc;
 	pc = &agent;
+	//pc->setState( pc->Manual );
+	// TODO: This segfaults:
+	//if( !former->isDead() )
+	//{	former->setState( former->Wander );	}// if
 //dpr( "PC set to " << agent );
 	assert( getIsPCSet() );
 	assert( getRangefinder() == gui().getRangefinder() );
@@ -839,8 +867,10 @@ void Game::doTickKeyboardIO()
 			//** TODO: Instead of checking keys on every loop, use keypress|release events to start|stop movement.
 
 			// "Accelerator" key pressed?a:
-			f32 move_speed = (receiver().shiftPressed() ) ? Agent::MOVEMENT_SLOW : Agent::MOVEMENT_FAST ;
+			f32 move_speed = (receiver().shiftPressed() ) ? getPC().getSpd() : getPC().getSpd() / 2.00 ;
 			f32 turn_speed_degrees = (receiver().shiftPressed() ? Agent::TURN_SLOW : Agent::TURN_FAST);
+			//f32 move_speed = (receiver().shiftPressed() ) ? Agent::MOVEMENT_SLOW : Agent::MOVEMENT_FAST ;
+			//f32 turn_speed_degrees = (receiver().shiftPressed() ? Agent::TURN_SLOW : Agent::TURN_FAST);
 
 
 			// ********* RELATIVE MOTION
@@ -953,12 +983,12 @@ void Game::doTickAgentsActions()
 	{
 		toDelete.clear();
 
-		// FIXME: 
-		if( !getIsPCSet() || (getPC() != *it) )
+		//if( !getIsPCSet() || (getPC() != *it) )
 		{
 
 //dpr("runtick");
 			it->runTick(static_cast<f32>(curTick - prevTick) / 1000.00); // NEXT ACTION
+			// TODO: Removal of corpses.
 
 		}// if not PC
 

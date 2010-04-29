@@ -10,7 +10,7 @@ namespace cj
 namespace actions
 {
 
-// Moves an Agent to a given destination at specified speed.  Simple reorientation.  
+// Moves an Agent to a given destination at specified speed.  Simple reorientation.
 class MoveAction : public actions::IAction//, public Timed
 {
 public:
@@ -26,24 +26,51 @@ private:
 
 // For traversing a list of points with A*.  TODO: A ctor that takes an iterator to a list of points.
 class FollowPathAction : public ActionSeq
-{ 
+{
 public:
 	//virtual ~FollowPathAction()
 	//{ assert( started() );	}
 };// FollowPathAction
 
+// id=die
+class DieAction : public IAction, public Timed
+{
+public:
+	DieAction( Agent& agt ): Timed(1), agent(agt)
+	{}//agent, animationspeed, period): Timed( period )
+	virtual ~DieAction() {}
+	virtual void start()
+	{
+//dpr("Agent " << agent.getID() << " began to Die.");
+		assert(!started());
+		agent.animationDie();
+		assert(!started());
+		IAction::start();
+	}// start()
+	virtual bool runTick( f32 frameDeltaTime )
+	{
+		return true;// one-shot
+		//if( Time-passed f32)
+			//(if done return true
+			 //(progn (set done) nil)))
+	}// runTick()
+private:
+	Agent& agent;
+};// DieAction
+
+
 // id=ATTACK
-//class AttackAction : public actions::IAction
-//{
-//public:
-	//AttackAction( Agent& attacker, Agent& targ );
-	//virtual ~AttackAction();
-	//virtual void start();
-	//virtual bool runTick( const f32 deltaTime );
-//private:
-	//Agent& attacker;
-	//Agent& target;
-//};// AttackAction
+class AttackAction : public IAction, public Timed
+{
+public:
+	AttackAction( Agent& attacker, Agent& targ );
+	virtual ~AttackAction();
+	virtual void start();
+	virtual bool runTick( const f32 deltaTime );
+private:
+	Agent& attacker;
+	Agent& target;
+};// AttackAction
 
 //// id=act-agent-turn
 //class ActAgentTurn : public ITickAction
