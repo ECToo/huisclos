@@ -50,7 +50,10 @@ public:
 	virtual ~IAction()
 	{	assert( started() );	}
 	virtual void start()
-	{	hasStarted = true;	}// start()
+	{	
+		assert( !started() );
+		hasStarted = true;	
+	}// start()
 	virtual bool runTick( f32 deltaTime ) = 0;
 
 	bool started() const
@@ -104,7 +107,8 @@ private:
 		//assert( !empty() );
 		//for( ActionsList::iterator aIt = begin(), vector<bool>::const_iterator bIt = finishedActions.begin(); aIt != end(); ++aIt, ++bIt )
 		//{
-			//*bIt = aIt->runTick( deltaTime );
+		//	if( !(*bIt) )
+			//{	*bIt = aIt->runTick( deltaTime );	}// if
 		//}// for
 
 		//for( vector<bool>::const_iterator bIt = finishedActions.begin(); bIt != finishedActions.end(); ++bIt )

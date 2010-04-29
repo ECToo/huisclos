@@ -4,11 +4,13 @@ namespace cj {
 
 void ManualState::runTick( f32 frameDeltaTime )
 {
+	assert( started() );
 	if( agent.getCurrentAction() )
 	{
 		const bool bDone = agent.getCurrentAction()->runTick(frameDeltaTime);
 		if( bDone )
 		{
+dpr("Manual-state action done.");
 			assert( agent.getCurrentAction() );
 			agent.clearCurrentAction();
 			agent.animationStand();
@@ -18,34 +20,45 @@ void ManualState::runTick( f32 frameDeltaTime )
 
 void WanderState::start()
 {
-	assert( !wander );
+	assert( !agent.getCurrentAction() );
 	resetWander();
+	IState::start();
 }// start
 
 void WanderState::stop()
 {
-	assert( wander );
-	delete wander;
-	wander = NULL;
+	assert( agent.getCurrentAction() );
+	//delete wander;
+	//wander = NULL;
+	agent.clearCurrentAction();
+	IState::stop();
 }// stop()
 
 void WanderState::resetWander()
 {
-	if( wander )
-	{
-		delete wander;
-	}// if
+	//if( wander )
+	//{
+		//delete wander;
+	//}// if
+	agent.clearCurrentAction();
 	wander = agent.Seek( Wall::Instance().getRandomNodePosition() ) ;
+	//wander = agent.Seek( Wall::Instance().getRandomNodePosition() ) ;
 }// resetWander()
 
 void WanderState::runTick( f32 deltaTime )
 {
-	assert( wander );
-	// FIXME: 
+	assert( started() );
+	assert( agent.getCurrentAction() );
+	// FIXME:
 	if( true/*!agent.isEnemyVisible()*/ )
 	{
-		if( wander->runTick(deltaTime) )
-		{	resetWander();	}// if
+		assert( wander == agent.getCurrentAction() );
+		if( agent.getCurrentAction()->runTick(deltaTime) )
+		//if( wander->runTick(deltaTime) )
+		{
+dpr( "Agent " << agent.getID() << " finished a Wander-state circuit." );
+			resetWander();
+		}// if
 	}// if
 	else // switch states
 	{
@@ -95,7 +108,7 @@ bool Agent::getLineOfSightExists( const Agent& a1, const Agent& a2 )
 
 // id=ctor
 Agent::Agent(IrrlichtDevice* d, stringw mesh, stringw t, stringw h, const vector3df& p, const s32 HP, const s32 Str, const s32 Spd, const s32 Acc):
-	Timed(20),
+	Timed(60),
 	device(d),
 	path(h),
 	texture(t),
@@ -107,7 +120,6 @@ Agent::Agent(IrrlichtDevice* d, stringw mesh, stringw t, stringw h, const vector
 	activationLevels(),
 	currentAction(NULL),
 	actionsList(),
-	//currentState( Agent::MANUAL ),
 	attackTarget(NULL),
 	hasMoveTarget(false),
 	Manual( new ManualState(*this) ),// TODO: plug leak
@@ -147,6 +159,9 @@ void Agent::AgentCtorImpl(stringw mesh, const vector3df& p)
     circle->setMaterialTexture(0, driver->getTexture(path + "circle.png"));
     //circle is not drawn unless needed, so make it invisible
     circle->setVisible(false);
+
+    assert( getState() );
+    getState()->start();
 }
 
 // id=dtor
@@ -309,8 +324,8 @@ Agent::AgentState Agent::getState() const
 {	return currentState;	}// getState()
 
 void Agent::setState( Agent::AgentState s )
-{	
-	currentState = s;	
+{
+	currentState = s;
 	currentState->start();
 }// setState()
 
@@ -391,8 +406,8 @@ dpr( "Clearing action." );
 
 void Agent::setCurrentAction( actions::IAction* const newact )
 {
-dpr("Setting action.");
 	clearCurrentAction();
+dpr("Setting action.");
 
 	currentAction = newact;
 }// setCurrentAction()
@@ -403,6 +418,7 @@ actions::MoveAction* const Agent::MoveTo( const vector3df dest, f32 speed )
 	assert(newact);
 	setCurrentAction(newact);
 
+	assert( !newact->started() );
 	newact->start();
 	return newact;
 }// MoveTo()
@@ -431,7 +447,7 @@ actions::FollowPathAction* const Agent::Seek( const vector3df dest, /*const Wall
 	//{
 //dpr( "Picking another point." );
 	//,
-	//return visitWaypoints( 
+	//return visitWaypoints(
 		//(speed == 0 ? getSpd() : speed) );
 //actions::IAction* const Agent::Seek( const vector3df& dest, const Wall& w, f32 speed, bool debug )
 //{
@@ -533,19 +549,6 @@ dpr( "HP: " << getHP() );
 //		assert( getState() == Agent::DEAD );
 	}// if
 }// TakeDamage()
-
-//actions::ActAgentAttack* const Agent::Attack( Agent& target )
-//{
-	//assert( Agent::getLineOfSightExists( *this, target ) );
-	//actions::ActAgentAttack* newact = new actions::ActAgentAttack(*this, target);
-	//assert(newact);
-	//setCurrentAction(newact);
-
-	//// TODO: Move into Action body:
-	//setAttackTarget(&target);
-	//animationAttack();
-	//return newact;
-//}// Attack()
 
 
 

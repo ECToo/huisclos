@@ -8,6 +8,8 @@ namespace actions
 
 void MoveAction::start()
 {
+dpr("Move started.");
+	assert( !started() );
 	agent.animationRun();
 	agent.getBody().setRotation( (destination - agent.getBody().getAbsolutePosition()).getHorizontalAngle() + vector3df(0,-90.00,0) );
 	agent.getBody().updateAbsolutePosition();
@@ -43,79 +45,32 @@ dpr("Arrived at " << destination);
 	else
 	{	return false;	}// else
 }// runTick()
-// ACT-AGENT-ATTACK
-//ActAgentAttack::ActAgentAttack( Agent& atk, Agent& targ )
+	
+
+// id=ATTACK
+//AttackAction::AttackAction( Agent& atk, Agent& targ )
 //: attacker(atk), target(targ)
-//{
-	////attacker.setAttackTarget(&target);
-	////attacker.animationAttack();
-//}// ctor
+//{}// ctor
 
-//ActAgentAttack::~ActAgentAttack()
+//void AttackAction::start()
 //{
-	//attacker.setAttackTarget( NULL );
-//}// dtor
-
-//bool ActAgentAttack::runTick( const f32 deltaTime )
-//{
-
 //dpr( "Agent " << attacker.getID() << " attacks Agent " << target.getID() );
-	//// TODO:
-	////calc hit chance based on ACC & dist
-	////random val
-	////if( val → hit )
+	////TODO: animationAttack();
+	//const bool hit = true;//TODO: calc hit chance based on ACC & dist
+	//if( hit )
 	//{
-		////TODO: calculate damage based on random val & STR
-		//const s32 damage = 10;
+		//const s32 damage = 10;//TODO: calculate damage based on random val & STR
 		//target.TakeDamage(damage);
-	//}
-
-	//return true;// one-shot
-//}// runTick()
-
-// ACT-AGENT-SEEK-POS
-//ActAgentSeekPosition::ActAgentSeekPosition( Agent& agt, const vector3df& dest, f32 spd ): agent(agt), destination(dest), speed(spd)
-//{
-	////agent.setHasMoveTarget( true );
-	//agent.animationRun();
-//}// ctor
-
-//ActAgentSeekPosition::~ActAgentSeekPosition() {}
-
-//bool ActAgentSeekPosition::runTick( const f32 deltaTime )
-//{
-////dpr("ActAgentMove tick to " << destination);
-	//vector3df remaining = destination - agent.getBody().getAbsolutePosition();
-	//f32 dist = deltaTime * speed;
-	//if( dist >= remaining.getLength() )
-	//{ 	dist = remaining.getLength(); 	}// if
-
-	//vector3df distVec = (destination - agent.getBody().getPosition());
-	//distVec.normalize() *= dist;
-////dpr("dist " << dist );
-
-	//// TODO: Optional:
-	////agent.getDriver().draw3DLine( agent.getPosition().toIrr_vector3df(), dist.to_absVec(*agent.getBody().getParent()).toIrr_vector3df() );
-
-	//// TODO: : DON'T Set agent heading here.   agent.setRotation( ... );
-	//agent.getBody().setRotation( (destination -  agent.getBody().getAbsolutePosition()).getHorizontalAngle() + vector3df(0,-90.00,0) );
-	//agent.getBody().setPosition( agent.getBody().getPosition() + distVec );
-	//agent.getBody().updateAbsolutePosition();
-
-	//if( agent.getBody().getAbsolutePosition() == destination )
-	//{
-//dpr("Arrived at " << destination);
-		////waypoint.setFancyGraphic(false);
-		//agent.setHasMoveTarget( false );
-		//return true;
 	//}// if
-	//else
-	//{	return false;	}// else
-//}// runTick()
+	//IAction::start();// chain up
+//}// start()
 
+//bool AttackAction::runTick( const f32 deltaTime )
+//{
+	////...
+	//return false; // TODO: Actual retval should be true only when the entire attack sequence is complete.
+//}// runTick()
 
 }// actions
-
-
 }// cj
 

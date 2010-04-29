@@ -39,25 +39,30 @@ namespace actions
 	class ActAgentAttack;
 	//class ActAgentTurn;
 	//class ActAgentMove;
-	// TODO: ActAgentVisitWaypoints < ActionSequence
 }//
 
 class IState
 {
 public:
-	//IState(): hasStarted(false) {}
-	//virtual ~IState()
-	//{	assert( started() );	}
-	virtual void start() = 0;
-	//virtual void start()
-	//{	hasStarted = true;	}// start()
-	virtual void stop() = 0;
+	IState(): hasStarted(false) {}
+	virtual ~IState()
+	{	assert( started() );	}
+	//virtual void start() = 0;
+	virtual void start()
+	{
+		assert( !started()	);
+		hasStarted = true;
+	}// start()
+	virtual void stop()
+	{
+		assert( hasStarted = true );
+	}// start()
 	virtual void runTick( f32 deltaTime ) = 0;
 
-	//bool started() const
-	//{	return hasStarted;	}//
-//private:
-	//bool hasStarted;
+	bool started() const
+	{	return hasStarted;	}//
+private:
+	bool hasStarted;
 };// State
 
 //class State
@@ -71,8 +76,10 @@ public:
 	ManualState( Agent& ag ): agent(ag)
 	{}
 	virtual ~ManualState() {}
-	virtual void start() {}
-	virtual void stop() {}
+	virtual void start()
+	{	IState::start();	}
+	virtual void stop()
+	{	IState::stop();	}
 	void runTick( f32 frameDeltaTime );
 private:
 	Agent& agent;
@@ -149,6 +156,7 @@ public:
 	//actions::ActAgentSeekPosition* const Goto( const vector3df& dest, f32 speed );// Go straight to the destination.
 	actions::MoveAction* const MoveTo( const vector3df dest, f32 speed );// Go straight to the destination.
 	template <typename TWaypointsList> actions::FollowPathAction* visitWaypoints( const TWaypointsList& pointsList, f32 speed );
+	// id=seek
 	actions::FollowPathAction* const Seek( const vector3df dest, /*const cj::Wall& w, */ f32 speed=0.00, bool debug=true );// Pathfind to the destination with A*.  Leaving speed=0 will cause that Agent's default speed to be used.
 	void clearAllActions();
 	void runTick( f32 frameDeltaTime );// Used by Game.
