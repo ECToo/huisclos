@@ -244,18 +244,19 @@ public:
 
 	// (used by ActAgentMove::runTick() for debug-line drawing.  TODO: Perh. make this a property of the Action itself?)
 	IVideoDriver& getDriver() {	return *driver;	}// getDriver()
+	
+	virtual u32 getAttackMultiplier() const {	return 1;	}
+	virtual s32 getHP() const { return HitPoints;	}//
+	virtual void setHP( const s32 hp ) {	HitPoints = hp;	}//
+	virtual s32 getStr() const { return Strength;	}//
+	virtual void setStr( const s32 str ) {	Strength = str;	}//
+	virtual s32 getSpd() const { return Speed;	}//
+	virtual void setSpd( const s32 spd ) {	Speed = spd;	}//
+	virtual s32 getAcc() const { return Accuracy;	}//
+	virtual void setAcc( const s32 acc ) {	Accuracy = acc;	}//
 
-	s32 getHP() const { return HitPoints;	}//
-	void setHP( const s32 hp ) {	HitPoints = hp;	}//
-	s32 getStr() const { return Strength;	}//
-	void setStr( const s32 str ) {	Strength = str;	}//
-	s32 getSpd() const { return Speed;	}//
-	void setSpd( const s32 spd ) {	Speed = spd;	}//
-	s32 getAcc() const { return Accuracy;	}//
-	void setAcc( const s32 acc ) {	Accuracy = acc;	}//
-
-	void Die();
-	void TakeDamage( const s32 damage );
+	virtual void Die();
+	virtual void TakeDamage( const s32 damage );
 	actions::AttackAction* const Attack( Agent& target );
 
 	//actions::ActAtkMelee* AttackMelee( Agent& target );

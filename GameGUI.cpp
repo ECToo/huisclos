@@ -30,8 +30,7 @@ namespace cj
 				//assert( agentTxt.size() > 0 );
 
 				Agent& agent = game.agents().at(i);
-				agentTxt << agent.getBody().getID() << L": " << agent.getAbsolutePosition() << L" @ " <<  rationalizeAngle( reorientGlobalAngleDammit( agent.getBody().getRotation().Y ) ) << L'°';
-				//agentTxt << agent.getBody().getID() << L": " << transposeVectorCoordsDammit( agent.getBody().getAbsolutePosition() ).c_str() << L" @ " <<  rationalizeAngle( reorientGlobalAngleDammit( agent.getBody().getRotation().Y ) ) << L'°';
+				agentTxt << agent.getBody().getID() << L": " << agent.getAbsolutePosition() << L" @ " <<  rationalizeAngle( reorientGlobalAngleDammit( agent.getBody().getRotation().Y ) ) << L"° HP " << agent.getHP();
 				(game.gui().*getAgentsListBox)().setItem(i, agentTxt.str().c_str(), -1 );
 			}// for
 		}// run()
