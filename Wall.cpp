@@ -6,10 +6,10 @@
 namespace cj
 {
 
-Wall& Wall::Instance() 
-{	
+Wall& Wall::Instance()
+{
 	assert(singleton);
-	return *singleton;	
+	return *singleton;
 }// Instance
 
 WallException::WallException(const char *msg)
@@ -85,7 +85,7 @@ void Wall::addNode(u32 size, vector3df position)
 
    try{
       n = FindNode(position.X, position.Z);
-      exists = (n->isWall == 2) && (n->point.X == position.X) && (n->point.Z == position.Z);
+      exists = (n->isWall == 2) && n->point.equals(position);
    }
    catch(out_of_range e)
    {  exists = false;  }
@@ -294,7 +294,9 @@ GraphNode* Wall::FindCloseNode(s32 x, s32 z)
    return paths.at(i);
 }
 
-std::list<vector3df> Wall::AStar(vector3df start, vector3df goal, s32 smooth, bool debug)
+
+std::list<vector3df> Wall::AStar(vector3df start, vector3df goal, s32 smooth, bool debug,
+   vector<IBillboardSceneNode*> *circles)
 {
    std::list<vector3df> waypoints;
 
@@ -335,7 +337,7 @@ std::list<vector3df> Wall::AStar(vector3df start, vector3df goal, s32 smooth, bo
       {
          GraphNode* gnext = current->connection[i];
 
-         if((gnext && gnext->score == -1) && (!(gnext->isWall) || (gnext->isWall == 1 && i % 2 == 0)))
+         if((gnext && gnext->score == -1) && (gnext->isWall == 0 || ((gnext->isWall == 1) && (i % 2 == 0))))
          {
             gnext->back = current;
             gnext->backdir = i;
@@ -347,7 +349,7 @@ std::list<vector3df> Wall::AStar(vector3df start, vector3df goal, s32 smooth, bo
                + fabs(ggoal->point.Z - gnext->point.Z);
             InsertList(open, gnext);
          }
-         else if(gnext && gnext->score > -1 && !(gnext->closed))
+         else if(gnext && gnext->score > -1 && !(gnext->closed) && (gnext->isWall == 0 || ((gnext->isWall == 1) && (i % 2 == 0))))
          {
             f32 temp_count = 0.0;
             if(i % 2)
@@ -370,7 +372,7 @@ std::list<vector3df> Wall::AStar(vector3df start, vector3df goal, s32 smooth, bo
       closed.push_back(current);
       current-> closed = true;
 
-      if(current->point.X == ggoal->point.X && current->point.Z == ggoal->point.Z)
+      if(current->point == ggoal->point)
       {
          GraphNode* previous = ggoal;
          previous->backdir = -2;
@@ -397,7 +399,7 @@ std::list<vector3df> Wall::AStar(vector3df start, vector3df goal, s32 smooth, bo
          }
 
          break;  // exits while
-      }  // end if(current->point.X == ggoal->point.X && current->point.Z == ggoal->point.Z)
+      }  // end if(current->point == ggoal->point)
 
    }  // end while(!open.empty())
 
@@ -449,12 +451,30 @@ std::list<vector3df> Wall::AStar(vector3df start, vector3df goal, s32 smooth, bo
    if(debug)
    {
       std::list<vector3df>::iterator w = waypoints.begin();
-      for(; w != waypoints.end(); w++)
+      std::list<vector3df>::iterator wg = waypoints.begin();
+
+      if(wg != waypoints.end())
       {
-         IBillboardSceneNode *circle = smgr->addBillboardSceneNode(0, dimension2df(dsize,dsize), *w);
+         wg = waypoints.end();
+         --wg;
+         IBillboardSceneNode *circle;
+
+         for(; w != wg; w++)
+         {
+            circle = smgr->addBillboardSceneNode(0, dimension2df(dsize,dsize), *w);
+            circle->setMaterialType(EMT_TRANSPARENT_ALPHA_CHANNEL);
+            circle->setMaterialFlag(EMF_LIGHTING, false);
+            circle->setMaterialTexture(0, driver->getTexture("blue.jpg"));
+            if(circles)
+            {  circles->push_back(circle);  }
+         }
+
+         circle = smgr->addBillboardSceneNode(0, dimension2df(dsize,dsize), *wg);
          circle->setMaterialType(EMT_TRANSPARENT_ALPHA_CHANNEL);
          circle->setMaterialFlag(EMF_LIGHTING, false);
          circle->setMaterialTexture(0, driver->getTexture("circle.png"));
+         if(circles)
+         {  circles->push_back(circle);  }
       }
    }
 
@@ -482,17 +502,24 @@ bool Wall::PathIsWide(vector3df from, vector3df to)
    pt1 += to;
    pt2 += to;
    triangle3df outtri;
-   line3d<f32> line(pf1,pt1);
+   line3d<f32> line(pf1,pt2);
 
    if(smgr->getSceneCollisionManager()->getSceneNodeAndCollisionPointFromRay(line, point, outtri))
    {  wide = false;  }
    else
    {
       line.start = pf2;
-      line.end = pt2;
+      line.end = pt1;
 
       if(smgr->getSceneCollisionManager()->getSceneNodeAndCollisionPointFromRay(line, point, outtri))
       {  wide = false;  }
+      else
+      {
+         line.start = from;
+         line.end = to;
+         if(smgr->getSceneCollisionManager()->getSceneNodeAndCollisionPointFromRay(line, point, outtri))
+         {  wide = false;  }
+      }
    }
 
    return wide;
@@ -515,7 +542,7 @@ GraphNode* Wall::NotWall(vector3df p)
    }
    catch(out_of_range e)
    {  return g;  }
-   if(g->point.X != close.X || g->point.Z != close.Z)
+   if(!g->point.equals(close))
    {  return g;  }
 
    if(g->isWall > 1)
