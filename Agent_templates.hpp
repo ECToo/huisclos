@@ -49,7 +49,8 @@ Agent::ContactsList Agent::DrawCircle(TAgentsIterator it, const TAgentsIterator&
             //figure the heading relative to the agent
             vector3df relative = other.getTranslation() - transform.getTranslation();
             //normalize the vector for easy computation
-            relative.normalize();
+            if(!iszero(relative.X) || !iszero(relative.Z))
+            {  relative.normalize();  }
             //The active agent faces along the X axis in her local coordinate
             //system, so create an already normalized vector.
             vector3df aheading(1,0,0);
@@ -175,10 +176,10 @@ actions::FollowPathAction* Agent::visitWaypoints( const TWaypointsList& pointsLi
 
 	//assert( !pointsList.empty() );
 	//if( pointsList.empty() ) { throw "Called visitWaypoints() on an invalid list of points!"; }
-	if( pointsList.empty() ) 
-	{ 
+	if( pointsList.empty() )
+	{
 dpr( "*** A* INVALID!" );
-		throw PathfindException("Called visitWaypoints() on an invalid list of points!"); 
+		throw PathfindException("Called visitWaypoints() on an invalid list of points!");
 	}// if
 	//ActionSequence* newact = new ActionSequence;
 	FollowPathAction* newact = new FollowPathAction;
@@ -217,7 +218,7 @@ dpr( "*** A* INVALID!" );
 //}// getVisibleAgents()
 
 
-//template <typename TAgentsList> 
+//template <typename TAgentsList>
 //bool Agent::isEnemyVisible( TAgentsList& allAgents, bool countIfDead ) const
 //{
 	//return getVisibleAgents(allAgents, countIfDead).empty();

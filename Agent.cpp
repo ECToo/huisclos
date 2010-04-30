@@ -129,10 +129,6 @@ void DeathState::start()
 	assert( !started()	);
 	assert( !agent.getCurrentAction() );
 	playdead = new actions::DieAction(agent);
-	vector<IBillboardSceneNode*>::iterator it = agent.circles.begin();
-   for(; it != agent.circles.end(); ++it)
-   {  (*it)->remove();  }
-   agent.circles.clear();
 	agent.setCurrentAction(playdead);
 	playdead->start();
 	IState::start();
@@ -159,9 +155,11 @@ void FightState::start()
 void FightState::resetAttack()
 {
 	agent.clearCurrentAction();
-
 	//it->getNearbyRandomEnemy()
 	vector<Agent*> agentsSeen = agent.getVisibleAgents();
+	// TODO: THIS CAUSED A FLOATING POINT EXCEPTION
+	if(agentsSeen.size() == 0)
+	{  return;  }
 	const u32 random = rand() % agentsSeen.size();
 dpr( "Agent " << agent.getID() << " attacking visible Agent #" << random );
 	attack = agent.Attack( **(agentsSeen.begin() + random) );
@@ -481,11 +479,14 @@ void Agent::setState( Agent::AgentState s )
 {
 	if( getState() != s )
 	{
+	   dpr ( "setstate" );
 		assert( !isDead() );
 		if( getState() )
 		{	currentState->stop();	}// if
 		currentState = s;
+		dpr ( "about to start" );
 		currentState->start();
+		dpr ( "after start" );
 	}// if
 }// setState()
 
@@ -712,6 +713,10 @@ void Agent::animationAttack()
 
 void Agent::animationDie()
 {
+   vector<IBillboardSceneNode*>::iterator it = circles.begin();
+   for(; it != circles.end(); ++it)
+   {  (*it)->remove();  }
+   circles.clear();
 	getBody().setLoopMode(false);
 	getBody().setMD2Animation(scene::EMAT_DEATH_FALLFORWARD);
 }//
@@ -775,7 +780,8 @@ bool Agent::MoveVector(vector3df distance)
 		{  //new position is not in line of sight of old position, so we
          //move only to the collision point - range
          vector3df d = distance;
-         d.normalize();
+         if(!iszero(d.X) || !iszero(d.Z))
+         {  d.normalize();  }
          d *= range;
          body->setPosition(point - d);
       }
