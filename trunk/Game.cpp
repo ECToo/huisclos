@@ -83,7 +83,7 @@ navgraph(NULL)
 {
 dpr( "* GAME CTOR" );
 	// id=time
-	srand(time(0));
+	srand(2);  // NEVER use srand(time(0)) when debugging
 
 	if( irrInstance != NULL ) throw "** Error: Attempted 2nd instantiation of cj::Game, a singleton class.";
 

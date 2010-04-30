@@ -50,7 +50,10 @@ namespace cj
 		virtual void setY( f32 y ) { internalVec.Y = y;	}
 
 		virtual f32 getLength() const {	return internalVec.getLength();	}// getLength()
-		virtual void setLength( f32 newmag ) {	internalVec.normalize() *= newmag;	}// getLength()
+		virtual void setLength( f32 newmag ) {
+		   if(!iszero(internalVec.X) || !iszero(internalVec.Y))
+		   {  internalVec.normalize() *= newmag;  }
+      }// getLength()
 		// "Manhattan distance":
 		virtual f32 getLengthSQ() const {	return internalVec.getLengthSQ();	}// getLengthSQ()
 

@@ -37,7 +37,8 @@ bool MoveAction::runTick( const f32 deltaTime )
 	{ 	dist = remaining.getLength(); 	}// if
 
 	vector3df distVec = (destination - agent.getBody().getPosition());
-	distVec.normalize() *= dist;
+	if(!iszero(distVec.X) || !iszero(distVec.Z))
+	{  distVec.normalize() *= dist;  }
 //dpr("dist " << dist );
 
 	// TODO: Optional:
@@ -46,7 +47,7 @@ bool MoveAction::runTick( const f32 deltaTime )
 	agent.getBody().setPosition( agent.getBody().getPosition() + distVec );
 	agent.getBody().updateAbsolutePosition();
 
-	if( agent.getBody().getAbsolutePosition() == destination )
+	if( agent.getBody().getAbsolutePosition().equals(destination) )
 	{
 dpr("Arrived at " << destination);
 		//waypoint.setFancyGraphic(false);
@@ -87,7 +88,7 @@ dpr( "Agent " << attacker.getID() << " attacks Agent " << target.getID() );
 	const bool hit = true;//TODO: calc hit chance based on ACC & dist
 	if( hit )
 	{
-		const s32 damage = 10;//TODO: calculate damage based on random val & STR
+		const s32 damage = 1;//TODO: calculate damage based on random val & STR
 		target.TakeDamage(damage);
 	}// if
 	assert(!started());
