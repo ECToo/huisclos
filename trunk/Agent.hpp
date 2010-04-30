@@ -255,9 +255,10 @@ public:
 	virtual s32 getAcc() const { return Accuracy;	}//
 	virtual void setAcc( const s32 acc ) {	Accuracy = acc;	}//
 
-	virtual void Die();
+	virtual void Die();// Induces Die action.  Surprise.  Unlike Attack() and Seek(), this method is compatible ⁅I think!⁆ with explicitly calling Agent.setState(Agent.Dead).
 	virtual void TakeDamage( const s32 damage );
-	actions::AttackAction* const Attack( Agent& target );
+	actions::AttackAction* const Attack( Agent& target );// Initiate attack; will continue until target is dead or interrupted by the calling State.
+	actions::AttackAction* const Attack();// Just shoot straight ahead
 
 	//actions::ActAtkMelee* AttackMelee( Agent& target );
 	//ActAtkRanged* AttackRanged( Agent& target );

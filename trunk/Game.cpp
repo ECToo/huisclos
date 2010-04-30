@@ -350,54 +350,58 @@ Agent& Game::getPC()
 // id=setpc
 void Game::setPC( Agent& agent )
 {
-	// First: if a PC is already selected, de-select her:
-	if( getIsPCSet() )
+	if( !agent.isDead() )
 	{
-		// But if specified Agent is already the PC, don't bother.
-		if( getPC() == agent )
-		{	return; /* Cheat a bit*/	}// if
+		// First: if a PC is already selected, de-select her:
+		if( getIsPCSet() )
+		{
+			// But if specified Agent is already the PC, don't bother.
+			if( getPC() == agent )
+			{	return; /* Cheat a bit*/	}// if
 
-		// Else
-		getPC().ClearCircle( agents().begin(), agents().end() );
-		// TODO: Copy sensor states more elegantly:
-		agent.setRangefinder( getPC().getRangefinder() );
-		agent.setRadar( getPC().getRadar() );
-		agent.setActivation( getPC().getActivation() );
+			// Else
+			getPC().ClearCircle( agents().begin(), agents().end() );
+			// TODO: Copy sensor states more elegantly:
+			agent.setRangefinder( getPC().getRangefinder() );
+			agent.setRadar( getPC().getRadar() );
+			agent.setActivation( getPC().getActivation() );
 
-		assert( gui().getRangefinder() == agent.getRangefinder() );
-		assert( gui().getRadar() == agent.getRadar() );
-		assert( gui().getActivation() == agent.getActivation() );
+			assert( gui().getRangefinder() == agent.getRangefinder() );
+			assert( gui().getRadar() == agent.getRadar() );
+			assert( gui().getActivation() == agent.getActivation() );
 
-		// Current PC shut off.  This could change in future.
-		getPC().allSensorsOff();
-	}// if
-	else// debug
-	{
-		assert( gui().getRangefinder() == false );
-		assert( gui().getRadar() == false );
-		assert( gui().getActivation() == false );
-	}// else
+			// Current PC shut off.  This could change in future.
+			getPC().allSensorsOff();
+		}// if
+		else// debug
+		{
+			assert( gui().getRangefinder() == false );
+			assert( gui().getRadar() == false );
+			assert( gui().getActivation() == false );
+		}// else
 
-	//if( getPC() != agent )
-	//{
-		//pc = NULL;
-		//agent.setState( agent.Wander );
-	//}// if
+		//if( getPC() != agent )
+		//{
+			//pc = NULL;
+			//agent.setState( agent.Wander );
+		//}// if
 
-	gui().setPC( agent );
+		gui().setPC( agent );
+		agent.setState( agent.Manual );
 
-	// NB: Do this LAST:
-	Agent* const former = pc;
-	pc = &agent;
-	//pc->setState( pc->Manual );
-	// TODO: This segfaults:
-	//if( !former->isDead() )
-	//{	former->setState( former->Wander );	}// if
-//dpr( "PC set to " << agent );
-	assert( getIsPCSet() );
-	assert( getRangefinder() == gui().getRangefinder() );
-	assert( getRadar() == gui().getRadar() );
-	assert( getActivation() == gui().getActivation() );
+		// NB: Do this LAST:
+		//Agent* const former = pc;
+		pc = &agent;
+		//pc->setState( pc->Manual );
+		// TODO: This segfaults:
+		//if( !former->isDead() )
+		//{	former->setState( former->Wander );	}// if
+	//dpr( "PC set to " << agent );
+		assert( getIsPCSet() );
+		assert( getRangefinder() == gui().getRangefinder() );
+		assert( getRadar() == gui().getRadar() );
+		assert( getActivation() == gui().getActivation() );
+	}// if not dead
 }// setPC()
 
 // id=unset
@@ -517,7 +521,7 @@ GameGUI& Game::gui()
 // id=addagent
 Agent& Game::addAgent( Agent::MOB type,  const irr::core::vector3df position)
 {
-	Agent* newagent;
+	Agent* newagent = NULL;
 
 	switch(type)
 	{
@@ -525,8 +529,12 @@ Agent& Game::addAgent( Agent::MOB type,  const irr::core::vector3df position)
 			newagent = &addAgent( new Fairy(device(), position) );
 		break;
 		// TODO: Others
+		default:
+			assert( "Shouldn't happen." );
+		break;
 	}// sw
 
+	assert( newagent );
 	// Output gameGUI: TODO: Perh. move this to GUI?
 	std::wostringstream msg( L"Agent ");
 	msg << newagent->getBody().getID() << " created at " << position;
@@ -849,7 +857,7 @@ bool Game::getBreakKeypress() const
 // id=keyboard, id=key
 void Game::doTickKeyboardIO()
 {
-	if( getIsPCSet() )
+	if( getIsPCSet() && !getPC().isDead() )
 	{
 		//if( receiver().isKeyPressed(irr::KEY_KEY_D) || receiver().isKeyPressed(irr::KEY_KEY_A) || receiver().isKeyPressed(irr::KEY_KEY_W) || receiver().isKeyPressed(irr::KEY_KEY_S) || receiver().isKeyPressed(irr::KEY_UP) || receiver().isKeyPressed(irr::KEY_DOWN) || receiver().isKeyPressed(irr::KEY_RIGHT) || receiver().isKeyPressed(irr::KEY_LEFT))
 		{
@@ -944,18 +952,15 @@ void Game::doTickKeyboardIO()
 
 			getPC().getBody().updateAbsolutePosition();
 
-			// id=camera-update
-			if( getViewMode() == Game::FIRST_PERSON )
-			{
-				cam().setPosition( getPC().getBody().getAbsolutePosition() + (30.0 * getPC().getBody().getAbsoluteTransformation().getRotationDegrees().rotationToDirection( vector3df(1,0,0) )) );
-				//cam().setPosition( getPC().getBody().getPosition() + (30.0 * getPC().getBody().getRotation().rotationToDirection( vector3df(1,0,0) )) );
-				cam().setRotation( getPC().getBody().getRotation() );
-				//cam().setRotation( getPC().getBody().getAbsoluteTransformation().getRotationDegrees() );
+			//// id=camera-update
+			// ... snip
+
+
+			// id=attack
+			if( receiver().isKeyPressed(irr::KEY_SPACE) )
+			{	
+				getPC().Attack();
 			}// if
-
-
-			// FIXME: Attack logic.
-			//getPC().shouldAttack = get-is-attack-button-pressed;
 
 
 			// TODO: Move to GUI section:

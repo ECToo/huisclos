@@ -39,25 +39,11 @@ public:
 	DieAction( Agent& agt ): Timed(1), agent(agt)
 	{}//agent, animationspeed, period): Timed( period )
 	virtual ~DieAction() {}
-	virtual void start()
-	{
-//dpr("Agent " << agent.getID() << " began to Die.");
-		assert(!started());
-		agent.animationDie();
-		assert(!started());
-		IAction::start();
-	}// start()
-	virtual bool runTick( f32 frameDeltaTime )
-	{
-		return true;// one-shot
-		//if( Time-passed f32)
-			//(if done return true
-			 //(progn (set done) nil)))
-	}// runTick()
+	virtual void start();
+	virtual bool runTick( f32 frameDeltaTime );
 private:
 	Agent& agent;
 };// DieAction
-
 
 // id=ATTACK
 class AttackAction : public IAction, public Timed
@@ -72,41 +58,7 @@ private:
 	Agent& target;
 };// AttackAction
 
-//// id=act-agent-turn
-//class ActAgentTurn : public ITickAction
-//{
-//public:
-	//// CTOR
-	//ActAgentTurn( Agent& agt, const relAngle& angle, f32 spd ): agent(agt), totalAngle(angle), speed(spd) {}
-
-	//// DTOR
-	//virtual ~ActAgentTurn() {}
-
-	//bool runTick( const f32 deltaTime )
-	//{
-		//relAngle angle( deltaTime * speed );
-
-		//if( angle > totalAngle )
-		//{	angle = totalAngle;	}// if
-
-		//agent.turnAtomic( angle );
-		//totalAngle -= angle;
-		//return totalAngle.iszero(); // indicates completion
-		////if( angle.iszero() )
-		////{
-			////agt.getActionsList().erase(*this);
-		////}// if
-	//}// runTick()
-//private:
-	//Agent& agent;
-	//relAngle totalAngle;
-	//const f32 speed;
-//};// ActAgentTurn
-
-
 }// actions
 }// cj
-
-
 //#endif
 

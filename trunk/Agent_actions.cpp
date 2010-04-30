@@ -56,6 +56,19 @@ dpr("Arrived at " << destination);
 	{	return false;	}// else
 }// runTick()
 
+// id=die
+void DieAction::start()
+{
+//dpr("Agent " << agent.getID() << " began to Die.");
+	assert(!started());
+	agent.animationDie();
+	assert(!started());
+	IAction::start();
+}// start()
+bool DieAction::runTick( f32 frameDeltaTime )
+{
+	return true;// one-shot
+}// runTick()
 
 // id=ATTACK
 AttackAction::AttackAction( Agent& atk, Agent& targ )

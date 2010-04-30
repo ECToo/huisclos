@@ -48,13 +48,13 @@ public:
 	IAction(): hasStarted(false)
 	{}
 	virtual ~IAction()
-	{	
-		//assert( started() );	
+	{
+		//assert( started() );
 	}// d
 	virtual void start()
-	{	
+	{
 		assert( !started() );
-		hasStarted = true;	
+		hasStarted = true;
 	}// start()
 	virtual bool runTick( f32 deltaTime ) = 0;
 
@@ -78,13 +78,13 @@ private:
 };// ActionSeq()
 
 // id=conj
-//class ActionConj : public IAction, private ActionsList
+//class ActionSet : public IAction, private ActionsList
 //{
 //public:
-	//ActionConj(): started(false)
+	//ActionSet(): started(false)
 	//{}
 
-	//virtual dtor() {}
+	//virtual ~ActionSet() {}
 
 	//virtual void start()
 	//{
@@ -109,7 +109,7 @@ private:
 		//assert( !empty() );
 		//for( ActionsList::iterator aIt = begin(), vector<bool>::const_iterator bIt = finishedActions.begin(); aIt != end(); ++aIt, ++bIt )
 		//{
-		//	if( !(*bIt) )
+			//if( !(*bIt) )
 			//{	*bIt = aIt->runTick( deltaTime );	}// if
 		//}// for
 
@@ -125,24 +125,11 @@ private:
 			 ////for b in vdone
 			 ////doing (setf b (runTick a f32))
 			 ////finally (return (every #'truep vdone)))
-	//using ActionList::size;
+	//using ActionsList::size;
 //private:
 	//vector<bool> finishedActions;
 	//bool started;
-//};// ActionConj
-
-//// ABC:
-//class ITickAction : public boost::noncopyable
-//{
-//public:
-	////ITickAction();
-	//virtual ~ITickAction() {}
-
-	//virtual bool operator==(const ITickAction& rhs) const {	return this==&rhs;	}
-
-	//// (Unlike the Persistent* version, note the "completion" retval.)
-	//virtual bool runTick( f32 frameDelta ) = 0;
-//};// ITickAction
+//};// ActionSet
 
 class IPersistentAction : public boost::noncopyable
 {
@@ -156,83 +143,6 @@ public:
 
 using namespace irr;
 using namespace irr::core;
-
-////TODO: Is it possible to use an adaptor queue, such as public std::queue<ITickAction, boost::ptr_deque<ITickAction> > ?
-//class ActionSequence : public ITickAction, public boost::ptr_deque<ITickAction>
-//{
-//public:
-	//virtual ~ActionSequence() {}
-	//virtual bool operator==(const ActionSequence& rhs) const {	return this==&rhs;	}
-
-	//using  boost::ptr_deque<ITickAction>::push_back;
-
-	//virtual bool runTick( f32 frameDelta )
-	//{
-		//if( !empty() )
-		//{
-			//const bool finished = front().runTick( frameDelta );
-			//if( finished )
-			//{
-////dpr("Popped.");
-				//assert( !empty() );
-				//pop_front();
-			//}// if
-		//}// if
-		//else
-		//{
-//dpr( "ActionSequence done." );
-		//}// else
-
-		//return( empty() );
-	//}// runTick()
-//};// ActionSequence
-
-//class ActionsList : public boost::noncopyable, private boost::ptr_list<ITickAction>
-//{
-//public:
-	////ActionsList(IrrlichtDevice& dev): device(dev), curTick(0), prevTick(0) {}
-	//virtual ~ActionsList() {}
-
-	//virtual void queueAction( ITickAction* const action )
-	//{
-		//// (It should not be in the list:)
-		//assert( find( begin(), end(), *action ) == end() );
-		//push_back(action);
-		//// (It should now be in the list:)
-		//assert( find( begin(), end(), *action ) != end() );
-	//}// queueAction()
-
-	//virtual void runTick( f32 frameDeltaTime )
-	//{
-		////prevTick = curTick;
-		////curTick = device.getTimer()->getTime();
-		////const f32 frameDeltaTime = static_cast<f32>(curTick - prevTick) / 1000.f; // Time in seconds
-
-		//iterator it = begin();
-		//while( it != end() )
-		////for( iterator it = begin(); it != end(); ++it )
-		//{
-			//const bool finished = it->runTick( frameDeltaTime );
-			//if( finished )
-			//{
-				//it = erase(it);
-			//}// if
-			//else
-			//{	++it;	}// else
-		//}// while
-	//}// runTick()
-
-	//using boost::ptr_list<ITickAction>::erase;
-
-	//using boost::ptr_list<ITickAction>::iterator;
-	//using boost::ptr_list<ITickAction>::begin;
-	//using boost::ptr_list<ITickAction>::end;
-
-////private:
-	////IrrlichtDevice& device;
-	////u32 curTick;
-	////u32 prevTick;
-//};// ActionsList
 
 // TODO: Why, again, was it that I used a std::list here?
 class PersistentActionsList : public boost::noncopyable, private std::list<IPersistentAction*>
