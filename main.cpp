@@ -40,6 +40,9 @@ int main()
 
 
 	Wall& wall = game.addWall();
+   wall.makeWall(1,20,vector3df(120,0,150));
+   wall.makeWall(10,1,vector3df(90,0,130));
+
 	wall.makeWall(1,20,vector3df(0,0,20));
    wall.makeWall(1,20,vector3df(20,0,-20));
    wall.makeWall(1,20,vector3df(70,0,50));
@@ -62,7 +65,7 @@ int main()
 	//faerie.setState( faerie.Dead );
 	faerie.setState( faerie.Fight );
 
-	Agent& f2 = game.addAgent( vector3df(0,0,100) );
+	Agent& f2 = game.addAgent( vector3df(30,0,150) );
 		f2.setState( f2.Wander );
 	Agent& f3 = game.addAgent( vector3df(-100,0,-100) );
 		f3.setState( f3.Wander );

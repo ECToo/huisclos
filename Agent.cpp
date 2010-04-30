@@ -58,7 +58,8 @@ void WanderState::start()
 
 void WanderState::stop()
 {
-	assert( agent.getCurrentAction() );
+	// FIXME: 
+	//assert( agent.getCurrentAction() );
 	//delete wander;
 	//wander = NULL;
 	agent.clearCurrentAction();
@@ -80,7 +81,7 @@ void WanderState::resetWander()
 		try
 		{
 			fail = false;
-			wander = agent.Seek( Wall::Instance().getRandomNodePosition(), static_cast<f32>(agent.getSpd()) ) ;
+			wander = agent.Seek( Wall::Instance().getRandomNodePosition(), static_cast<f32>(agent.getSpd()), true ) ;
 		}// try
 		catch(PathfindException e)
 		{
@@ -145,7 +146,7 @@ void DeathState::runTick( f32 deltaTime )
 	playdead->runTick(deltaTime);
 }// runTick()
 
-// id=fight, id=attack, id=atk
+// id=fight
 void FightState::start()
 {
 	assert( !started()	);
@@ -159,20 +160,22 @@ void FightState::resetAttack()
 {
 	agent.clearCurrentAction();
 
+	//it->getNearbyRandomEnemy()
 	vector<Agent*> agentsSeen = agent.getVisibleAgents();
 	const u32 random = rand() % agentsSeen.size();
 dpr( "Agent " << agent.getID() << " attacking visible Agent #" << random );
+	attack = agent.Attack( **(agentsSeen.begin() + random) );
 
-	//it->getNearbyRandomEnemy()
-	attack = new actions::AttackAction( agent, **(agentsSeen.begin() + random) );
-	agent.setCurrentAction(attack);
-	attack->start();
+	// And all this got moved into the Attack() method:
+	//attack = new actions::AttackAction( agent, **(agentsSeen.begin() + random) );
+	//agent.setCurrentAction(attack);
+	//attack->start();
 }// resetAttack()
 
 void FightState::stop()
 {
-	assert( attack );
-	assert( attack == agent.getCurrentAction() );
+	//assert( attack );
+	//assert( attack == agent.getCurrentAction() );
 	agent.clearCurrentAction();
 	attack = NULL;
 	IState::stop();
@@ -260,7 +263,7 @@ Agent::Agent(IrrlichtDevice* d, stringw mesh, stringw t, stringw h, const vector
 	Wander( new WanderState(*this) ),// TODO: plug leak
 	Dead( new DeathState(*this) ),// TODO: plug leak
 	Fight( new FightState(*this) ),// TODO: plug leak
-	currentState( Manual ),
+	currentState( Wander ),
 	HitPoints(HP),
 	Strength(Str),
 	Speed(Spd),
@@ -341,13 +344,6 @@ void Agent::setRotation(const relAngle& rot) { 	getBody().setRotation( rot.to_re
 //{ 	actionsList.queueAction( new actions::ActAgentTurn(*this, ang, speed) ); }// turn()
 
 // TODO: inline
-// id=move
-//actions::ActAgentMove* const Agent::move( const relVec& dest, f32 speed )
-//{
-//	actions::ActAgentMove* const newact = new actions::ActAgentMove(*this, dest, speed);
-//	actionsList.queueAction( newact );
-//	return newact;
-//}// move()
 
 vector<f32> Agent::DrawFeelers(bool debug)
 {   //defaults for just one feeler
@@ -486,6 +482,8 @@ void Agent::setState( Agent::AgentState s )
 	if( getState() != s )
 	{
 		assert( !isDead() );
+		if( getState() )
+		{	currentState->stop();	}// if
 		currentState = s;
 		currentState->start();
 	}// if
@@ -585,17 +583,6 @@ actions::MoveAction* const Agent::MoveTo( const vector3df dest, f32 speed )
 	return newact;
 }// MoveTo()
 
-//actions::ActAgentSeekPosition* const Agent::Goto( const vector3df& dest, f32 speed )
-//{
-	//actions::ActAgentSeekPosition* newact = new actions::ActAgentSeekPosition(*this, dest, speed );
-	//assert(newact);
-	//setCurrentAction(newact);
-	//// TODO: Move into Action:
-	//setHasMoveTarget( true );
-	//animationRun();
-	//return newact;
-//}// Goto()
-
 // id=seek
 actions::FollowPathAction* const Agent::Seek( const vector3df dest, /*const Wall& w,*/ f32 speed, bool debug )
 {
@@ -603,19 +590,6 @@ actions::FollowPathAction* const Agent::Seek( const vector3df dest, /*const Wall
 	return visitWaypoints( Wall::Instance().AStar(getBody().getPosition(), dest, 2, true, &circles),
 		(speed == 0 ? getSpd() : speed) );
 }// Seek()
-	////return visitWaypoints( const_cast<Wall&>(w).AStar(getBody().getPosition(), dest, 2, debug),
-	//std::list<vector3df> points = Wall::Instance().AStar(getBody().getPosition(), dest, 2, debug);
-	//while( points.empty() )
-	//{
-//dpr( "Picking another point." );
-	//,
-	//return visitWaypoints(
-		//(speed == 0 ? getSpd() : speed) );
-//actions::IAction* const Agent::Seek( const vector3df& dest, const Wall& w, f32 speed, bool debug )
-//{
-	//return visitWaypoints( const_cast<Wall&>(w).AStar(getBody().getPosition(), dest, 2, debug),
-		//(speed == 0 ? getSpd() : speed) );
-//}// Seek()
 
 void Agent::clearAllActions()
 {
@@ -711,6 +685,23 @@ dpr( "HP: " << getHP() );
 	}// if
 }// TakeDamage()
 
+// id=attack
+actions::AttackAction* const Agent::Attack( Agent& target )
+{
+	clearCurrentAction();
+	actions::AttackAction* newact = new actions::AttackAction( *this, target );
+	assert(newact);
+	setCurrentAction(newact);
+
+	assert( !newact->started() );
+	newact->start();
+	return newact;
+}// Attack()
+
+actions::AttackAction* const Agent::Attack()
+{
+dpr( "PC shooting!" );
+}
 
 
 void Agent::animationStand()
