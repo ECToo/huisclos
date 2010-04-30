@@ -37,8 +37,7 @@ bool MoveAction::runTick( const f32 deltaTime )
 	{ 	dist = remaining.getLength(); 	}// if
 
 	vector3df distVec = (destination - agent.getBody().getPosition());
-	if(!iszero(distVec.X) || !iszero(distVec.Z))
-	{  distVec.normalize() *= dist;  }
+	distVec.normalize() *= dist;
 //dpr("dist " << dist );
 
 	// TODO: Optional:
@@ -47,7 +46,7 @@ bool MoveAction::runTick( const f32 deltaTime )
 	agent.getBody().setPosition( agent.getBody().getPosition() + distVec );
 	agent.getBody().updateAbsolutePosition();
 
-	if( agent.getBody().getAbsolutePosition().equals(destination) )
+	if( iszero(remaining.getLength()) )
 	{
 dpr("Arrived at " << destination);
 		//waypoint.setFancyGraphic(false);

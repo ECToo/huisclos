@@ -58,7 +58,7 @@ void WanderState::start()
 
 void WanderState::stop()
 {
-	// FIXME: 
+	// FIXME:
 	//assert( agent.getCurrentAction() );
 	//delete wander;
 	//wander = NULL;
@@ -559,6 +559,10 @@ void Agent::clearCurrentAction()
 {
 	if( currentAction != NULL )
 	{
+	   vector<IBillboardSceneNode*>::iterator it = circles.begin();
+   for(; it != circles.end(); ++it)
+   {  (*it)->remove();  }
+   circles.clear();
 dpr( "Clearing action." );
 		delete currentAction;
 		currentAction = NULL;
@@ -681,6 +685,10 @@ dpr( "HP: " << getHP() );
 	// If I've had it
 	if( getHP() == 0 )
 	{
+	   vector<IBillboardSceneNode*>::iterator it = circles.begin();
+      for(; it != circles.end(); ++it)
+      {  (*it)->remove();  }
+      circles.clear();
 		Die();
 //		assert( getState() == Agent::DEAD );
 	}// if
@@ -702,6 +710,50 @@ actions::AttackAction* const Agent::Attack( Agent& target )
 actions::AttackAction* const Agent::Attack()
 {
 dpr( "PC shooting!" );
+   s32 shootrange = 100;
+   matrix4 transform = body->getAbsoluteTransformation();
+   line3d<f32> line;
+   line.start = transform.getTranslation();
+   line.end = vector3df(shootrange, 0, 0);
+   transform.transformVect(line.end);
+   vector3df point;
+   triangle3df outtri;
+   SMaterial basic = SMaterial();
+   basic.setFlag(EMF_LIGHTING, false);
+   driver->setMaterial(basic);
+   driver->setTransform(video::ETS_WORLD, matrix4());
+   vector<Agent*> agentsSeen = getVisibleAgents();
+   vector<Agent*>::iterator it = agentsSeen.begin();
+
+   for(; it != agentsSeen.end(); ++it)
+   {
+      vector3df target = (*it)->getBody().getPosition() - transform.getTranslation();
+      f32 angle = atan2(target.Z, target.X);
+      angle *= 180/PI;
+
+      if(fabs(angle) < 10)
+      {
+         clearCurrentAction();
+         actions::AttackAction* newact = new actions::AttackAction( *this, *(*it) );
+         setCurrentAction(newact);
+         newact->start();
+         line.end = (*it)->getBody().getPosition();
+         driver->draw3DLine(line.start, line.end, SColor(102,120,255,136));
+         dpr("HIT!");
+         return newact;
+      }
+   }
+
+   if(cmgr->getSceneNodeAndCollisionPointFromRay(line, point, outtri))
+   {
+      line.end = point;
+      driver->draw3DLine(line.start, line.end, SColor(102,120,255,136));
+      driver->draw3DTriangle(outtri, video::SColor(255,0,0,130));
+   }
+   else
+   {
+      driver->draw3DLine(line.start, line.end, SColor(102,120,255,136));
+   }
 }
 
 
@@ -713,10 +765,6 @@ void Agent::animationAttack()
 
 void Agent::animationDie()
 {
-   vector<IBillboardSceneNode*>::iterator it = circles.begin();
-   for(; it != circles.end(); ++it)
-   {  (*it)->remove();  }
-   circles.clear();
 	getBody().setLoopMode(false);
 	getBody().setMD2Animation(scene::EMAT_DEATH_FALLFORWARD);
 }//
