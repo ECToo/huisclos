@@ -51,7 +51,8 @@ class Wall
       void makeWall(u32 length, u32 width, vector3df position); //create a long wall
       void DrawNodes(void);
       GraphNode* FindCloseNode(s32 x, s32 z);
-      std::list<vector3df> AStar(vector3df start, vector3df goal, s32 smooth, bool debug = false);
+      std::list<vector3df> AStar(vector3df start, vector3df goal, s32 smooth, bool debug = false,
+         vector<IBillboardSceneNode*> *circles = NULL);
       bool PathIsWide(vector3df from, vector3df to);
       bool operator== (const Wall& rhs) const;
       vector3df getRandomNodePosition(); // Returns the coords for a random node in the graph.

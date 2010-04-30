@@ -49,7 +49,7 @@ int main()
    wall.makeWall(1,20,vector3df(-70,0,50));
 
    	// <Config>
-   	Fairy::DEFAULT_SPEED = 400;
+   	Fairy::DEFAULT_SPEED = 50;
    	Fairy::DEFAULT_ATTACK_MULTIPLIER = 10;
 
 	Agent& pc = game.addAgent( vector3df(0,0,90) );

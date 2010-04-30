@@ -244,7 +244,7 @@ public:
 
 	// (used by ActAgentMove::runTick() for debug-line drawing.  TODO: Perh. make this a property of the Action itself?)
 	IVideoDriver& getDriver() {	return *driver;	}// getDriver()
-	
+
 	virtual u32 getAttackMultiplier() const {	return 1;	}
 	virtual s32 getHP() const { return HitPoints;	}//
 	virtual void setHP( const s32 hp ) {	HitPoints = hp;	}//
@@ -283,6 +283,8 @@ public:
 	// <TAG> CA - NOTE: Do not add public functions to Agent beyond this line.
 	// This will be my section.
 	bool MoveVector(vector3df distance);  //COLLISON MOVEMENT
+
+	vector<IBillboardSceneNode*> circles;
 
 // id=private, id=priv
 private:

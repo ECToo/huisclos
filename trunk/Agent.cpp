@@ -104,6 +104,10 @@ void WanderState::runTick( f32 deltaTime )
 		//if( wander->runTick(deltaTime) )
 		{
 dpr( "Agent " << agent.getID() << " finished a Wander-state circuit." );
+			vector<IBillboardSceneNode*>::iterator it = agent.circles.begin();
+         for(; it != agent.circles.end(); ++it)
+         {  (*it)->remove();  }
+         agent.circles.clear();
 			resetWander();
 		}// if
 	}// if
@@ -124,6 +128,10 @@ void DeathState::start()
 	assert( !started()	);
 	assert( !agent.getCurrentAction() );
 	playdead = new actions::DieAction(agent);
+	vector<IBillboardSceneNode*>::iterator it = agent.circles.begin();
+   for(; it != agent.circles.end(); ++it)
+   {  (*it)->remove();  }
+   agent.circles.clear();
 	agent.setCurrentAction(playdead);
 	playdead->start();
 	IState::start();
@@ -497,7 +505,7 @@ bool Agent::moveAtomic( const relVec& dest )
     u32 old_resolution = resolution;
     // to speed up collision detection and make sure we detect from all angles
     awareness = 360;
-    range = 5;  // NOTE: adjust to your liking, this allows hair to go through the walls
+    range = 4;  // NOTE: adjust to your liking, this allows hair to go through the walls
     resolution = 7;
     // record success or failure of movement
     bool moved = false;
@@ -592,7 +600,7 @@ actions::MoveAction* const Agent::MoveTo( const vector3df dest, f32 speed )
 actions::FollowPathAction* const Agent::Seek( const vector3df dest, /*const Wall& w,*/ f32 speed, bool debug )
 {
 	//return visitWaypoints( const_cast<Wall&>(w).AStar(getBody().getPosition(), dest, 2, debug),
-	return visitWaypoints( Wall::Instance().AStar(getBody().getPosition(), dest, 2, debug),
+	return visitWaypoints( Wall::Instance().AStar(getBody().getPosition(), dest, 2, true, &circles),
 		(speed == 0 ? getSpd() : speed) );
 }// Seek()
 	////return visitWaypoints( const_cast<Wall&>(w).AStar(getBody().getPosition(), dest, 2, debug),
@@ -732,7 +740,7 @@ bool Agent::MoveVector(vector3df distance)
     u32 old_resolution = resolution;
     // to speed up collision detection and make sure we detect from all angles
     awareness = 360;
-    range = 5;
+    range = 4;
     resolution = 7;
     // record success or failure of movement
     bool moved = false;
