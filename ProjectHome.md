@@ -1,0 +1,1 @@
+FPS 3D game using the Irrlicht Engine. AI techniques include A`*` path finding, neuro-evolution and finite state machines. Arena deathmatch where humans find themselves in hell fighting with each other using magic with no way out or anything else to do.
